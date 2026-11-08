@@ -1,0 +1,5 @@
+# Для работы с PostgreSQL 16 (нужен интернет при установке):
+#   pip install -r requirements-postgres.txt
+# Затем задайте переменные окружения POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD (и при необходимости POSTGRES_HOST, POSTGRES_PORT).
+-r requirements.txt
+psycopg[binary]>=3.1,<4

@@ -1,6 +1,6 @@
 # Tildes — бэкенд (Python + Django)
 
-Django 5.1 + Django REST Framework + django-cors-headers, база SQLite.
+Django 5.1 + Django REST Framework + django-cors-headers. База — PostgreSQL 16 (продакшен) или SQLite (разработка, по умолчанию).
 Все пакеты уже скачаны в папку `wheels/` — установка работает **без интернета**.
 
 ## Установка
@@ -39,21 +39,43 @@ python manage.py runserver 8000
 backend/
 ├── config/            настройки Django (settings.py, urls.py)
 ├── learning/          приложение
-│   ├── models.py      Level, Module, Word, Question + прогресс: Learner, WordStat, CompletedTopic, QuizResult, TopicRead
-│   ├── services.py    баллы, ранги, серия дней, взвешенная колода повторения
+│   ├── models.py      схема БД: 23 таблицы (см. раздел «База данных»)
+│   ├── services.py    баллы и их журнал, ранги, серия дней, взвешенная колода повторения
 │   ├── views.py       API
 │   ├── urls.py        маршруты /api/...
-│   ├── admin.py       админка
+│   ├── admin.py       админка + журнал изменений (audit_log)
 │   ├── data/content.json                    контент B2 (10 модулей, 225 слов, 50 вопросов)
 │   └── management/commands/load_content.py  загрузка/обновление контента
+├── db/schema.sql      справочный DDL для PostgreSQL 16
 ├── wheels/            скачанные пакеты (Django, DRF, CORS и зависимости)
 ├── requirements.txt
 └── setup.bat / setup.sh / run.bat / run.sh
 ```
 
+## База данных
+
+23 таблицы (имена совпадают с макетом), плюс служебные таблицы Django (`django_*`, `auth_*`).
+
+| Группа | Таблицы |
+|---|---|
+| Пользователи | `users` (свой пользователь Django: email вместо логина, роли student / editor / admin) |
+| Контент | `levels` → `modules` → `lessons` → `lesson_blocks`, `words`, `texts`, `grammar_rules` (`grammar_table_rows`, `grammar_examples`), `quizzes` (`quiz_questions` → `quiz_options`); `media_files` |
+| Админка | `audit_log` — кто, что и когда изменил в админке |
+| Прогресс | `point_transactions`, `user_activity_days`, `user_word_progress`, `user_lesson_progress`, `card_sessions` → `card_answers`, `quiz_attempts` → `quiz_attempt_answers` |
+
+Зарезервированы на будущее: `listening_tasks`, `speaking_tasks`, `writing_tasks`.
+
+- У контента есть статус `draft / review / published / archived`; API отдаёт только опубликованное.
+- `users.points` — сумма записей `point_transactions` (хранится для быстрого рейтинга).
+- В `content.json` у модуля 4 урока заданы только названиями, поэтому слова, грамматика, текст и тест модуля загружаются в его первый урок. Их можно разнести по урокам в админке — API соберёт тему обратно.
+
+**PostgreSQL:** `pip install -r requirements-postgres.txt` (нужен интернет), затем задайте `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (и при необходимости `POSTGRES_HOST`, `POSTGRES_PORT`) и выполните `python manage.py migrate` и `python manage.py load_content`. Без `POSTGRES_DB` используется SQLite.
+
+**Обновление со старой версии:** схема создана заново, старый `db.sqlite3` несовместим — удалите его и снова запустите `setup`.
+
 ## Пользователь
 
-Регистрации пока нет. Фронтенд генерирует id устройства и отправляет его в заголовке `X-Device-Id` — по нему создаётся `Learner`. Позже можно добавить авторизацию и связать `Learner` с `User`.
+Регистрации пока нет. Фронтенд генерирует id устройства и отправляет его в заголовке `X-Device-Id` — по нему создаётся запись в `users` с техническим email `<id>@device.tildes.local` и без пароля. Сотрудники входят в админку по email и паролю (`python manage.py createsuperuser`). Роль `editor` может менять только контент.
 
 ## API
 
