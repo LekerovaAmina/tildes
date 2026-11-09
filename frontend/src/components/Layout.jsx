@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useProgress } from '../store/progress.jsx'
 import Icon from './Icon.jsx'
+import AuthButtons from './AuthButtons.jsx'
 
 const nav = [
   { to: '/home', label: 'Главная', icon: 'home' },
@@ -38,6 +39,7 @@ export default function Layout() {
             <Link to="/rating" className="chip chip-points">
               <Icon name="star" size={14} /> {points}
             </Link>
+            <AuthButtons />
           </div>
         </div>
       </header>

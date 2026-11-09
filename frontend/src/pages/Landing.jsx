@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Layout.jsx'
 import Icon from '../components/Icon.jsx'
 import { useContent } from '../store/content.jsx'
+import AuthButtons from '../components/AuthButtons.jsx'
 import { useProgress } from '../store/progress.jsx'
 
 const features = [
@@ -45,9 +46,12 @@ export default function Landing() {
     <div className="landing">
       <header className="landing-header container">
         <Logo />
-        <button className="btn btn-ghost btn-sm" onClick={scrollToLevels}>
-          Начать
-        </button>
+        <div className="landing-actions">
+          <button className="btn btn-ghost btn-sm" onClick={scrollToLevels}>
+            Начать
+          </button>
+          <AuthButtons />
+        </div>
       </header>
 
       <section className="hero container">

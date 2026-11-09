@@ -10,6 +10,7 @@ import TopicsList from './pages/TopicsList.jsx'
 import TopicDetail from './pages/TopicDetail.jsx'
 import Rating from './pages/Rating.jsx'
 import ServerGate from './components/ServerGate.jsx'
+import Auth from './pages/Auth.jsx'
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
@@ -23,7 +24,18 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      <ServerGate>
+      <Routes>
+        {/* Вход не ждёт загрузки контента */}
+        <Route path="/auth" element={<Auth />} />
+        <Route path="*" element={<GatedRoutes />} />
+      </Routes>
+    </>
+  )
+}
+
+function GatedRoutes() {
+  return (
+    <ServerGate>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/soon/:level" element={<Soon />} />
@@ -38,7 +50,6 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </ServerGate>
-    </>
+    </ServerGate>
   )
 }

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',  # таблица authtoken_token — токены входа
     'corsheaders',
     'learning',
 ]
@@ -166,6 +167,7 @@ CORS_ALLOW_HEADERS = [
     'accept',
     'content-type',
     'x-device-id',
+    'authorization',
 ]
 
 REST_FRAMEWORK = {
@@ -173,4 +175,6 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
     'UNAUTHENTICATED_USER': None,
+    # Попытки входа/регистрации с одного IP (learning/auth.py)
+    'DEFAULT_THROTTLE_RATES': {'auth': os.environ.get('AUTH_THROTTLE_RATE', '20/min')},
 }

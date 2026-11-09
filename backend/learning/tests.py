@@ -186,3 +186,65 @@ class AdminTests(TestCase):
                      'learning/grammarrule/1/change/', 'learning/quizquestion/1/change/', 'learning/auditlog/',
                      'learning/mediafile/add/', 'learning/pointtransaction/']:
             self.assertEqual(self.client.get('/admin/' + path).status_code, 200, path)
+
+
+class AuthApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_register_login_me_logout(self):
+        r = self.client.post('/api/auth/register/', {'email': 'Aru@Example.kz', 'password': 'Qazaq-Til-2026', 'name': 'Ару'}, format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.data['user']['email'], 'aru@example.kz')
+        user = User.objects.get(email='aru@example.kz')
+        self.assertTrue(user.check_password('Qazaq-Til-2026'))
+
+        r = self.client.post('/api/auth/login/', {'email': 'aru@example.kz', 'password': 'wrong-pass-1'}, format='json')
+        self.assertIn(r.status_code, (401, 403))
+
+        r = self.client.post('/api/auth/login/', {'email': 'ARU@example.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        token = r.data['token']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+        r = self.client.get('/api/auth/me/')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['user']['name'], 'Ару')
+        # Остальной API видит вошедшего пользователя без X-Device-Id
+        self.assertEqual(self.client.get('/api/progress/').status_code, 200)
+
+        self.assertEqual(self.client.post('/api/auth/logout/').status_code, 200)
+        self.assertIn(self.client.get('/api/auth/me/').status_code, (401, 403))
+
+    def test_register_validation(self):
+        self.client.post('/api/auth/register/', {'email': 'a@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        r = self.client.post('/api/auth/register/', {'email': 'A@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('email', r.data)
+        r = self.client.post('/api/auth/register/', {'email': 'c@b.kz', 'password': '123'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('password', r.data)
+
+    def test_register_keeps_device_progress(self):
+        self.client.get('/api/progress/', HTTP_X_DEVICE_ID='dev-1')
+        device_user = User.objects.get(email='dev-1@' + User.DEVICE_EMAIL_DOMAIN)
+        r = self.client.post('/api/auth/register/', {'email': 'd@b.kz', 'password': 'Qazaq-Til-2026'}, format='json', HTTP_X_DEVICE_ID='dev-1')
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.data['user']['id'], device_user.id)
+        self.assertFalse(User.objects.filter(email='dev-1@' + User.DEVICE_EMAIL_DOMAIN).exists())
+
+    def test_staff_login_opens_admin(self):
+        User.objects.create_superuser('boss@b.kz', 'Qazaq-Til-2026')
+        r = self.client.post('/api/auth/login/', {'email': 'boss@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data['redirect'], '/admin/')
+        self.assertTrue(r.data['user']['is_staff'])
+        # Сессия открыта — админка пускает без повторного входа
+        self.assertEqual(self.client.get('/admin/').status_code, 200)
+
+    def test_student_login_has_no_redirect(self):
+        self.client.post('/api/auth/register/', {'email': 's@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        r = self.client.post('/api/auth/login/', {'email': 's@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
+        self.assertNotIn('redirect', r.data)
+        self.assertFalse(r.data['user']['is_staff'])
+        self.assertEqual(self.client.get('/admin/').status_code, 302)  # на страницу входа админки
