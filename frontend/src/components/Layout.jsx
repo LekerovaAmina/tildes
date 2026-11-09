@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { serverUrl } from '../api/client.js'
 import { useAuth } from '../store/auth.jsx'
 import { useProgress } from '../store/progress.jsx'
 import Icon from './Icon.jsx'
@@ -26,7 +27,7 @@ export default function Layout() {
   // После ручного выхода и нового входа — на главную, а не на последнюю открытую страницу
   const onLogout = async () => {
     await logout()
-    navigate('/login', { replace: true })
+    navigate('/auth', { replace: true })
   }
   return (
     <div className="app">
@@ -46,6 +47,11 @@ export default function Layout() {
             <Link to="/rating" className="chip chip-points">
               <Icon name="star" size={14} /> {points}
             </Link>
+            {user.is_staff && (
+              <a href={serverUrl('/admin/')} className="chip chip-admin" title="Админ-панель Django">
+                Админка
+              </a>
+            )}
             <button className="icon-btn logout-btn" onClick={onLogout} title={`Выйти (${user.email})`} aria-label="Выйти">
               <Icon name="logout" size={18} />
             </button>

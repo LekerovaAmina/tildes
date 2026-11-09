@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework.authtoken',
+    'rest_framework.authtoken',  # таблица authtoken_token — токены входа
     'corsheaders',
     'learning',
 ]
@@ -170,18 +170,16 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_HEADERS = [
     'accept',
-    'authorization',
     'content-type',
     'x-device-id',
+    'authorization',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer', 'rest_framework.renderers.BrowsableAPIRenderer'],
-    # Вход по токену: фронтенд шлёт заголовок Authorization: Token <key> (см. learning/auth_views.py)
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.TokenAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
+    'UNAUTHENTICATED_USER': None,
+    # Попытки входа/регистрации с одного IP (learning/auth.py)
+    'DEFAULT_THROTTLE_RATES': {'auth': os.environ.get('AUTH_THROTTLE_RATE', '20/min')},
 }
-
-# Анонимные «пользователи устройства» по заголовку X-Device-Id (как в MVP до регистрации).
-# Выключено: теперь на сайт входят по email и паролю. Включается для тестов и отладки.
-ALLOW_DEVICE_USERS = os.environ.get('ALLOW_DEVICE_USERS', '0') == '1'

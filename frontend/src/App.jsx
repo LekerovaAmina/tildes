@@ -25,8 +25,10 @@ export default function App() {
     <>
       <ScrollToTop />
       <Routes>
-        <Route path="/login" element={<AuthPage mode="login" />} />
-        <Route path="/register" element={<AuthPage mode="register" />} />
+        {/* Вход и регистрация — /auth и /auth?mode=register; /login и /register — короткие адреса */}
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Landing />} />
           <Route path="/soon/:level" element={<Soon />} />

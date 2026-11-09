@@ -1,23 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { api, tokenStore } from '../api/client.js'
+import { api, getToken } from '../api/client.js'
 
-// Вход по email и паролю. status: 'checking' (проверяем сохранённый токен) | 'guest' | 'user'
+// Вход по email и паролю (backend/learning/auth.py).
+// status: 'checking' (проверяем сохранённый токен) | 'guest' | 'user'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [state, setState] = useState(() => ({ status: tokenStore.get() ? 'checking' : 'guest', user: null }))
+  const [state, setState] = useState(() => ({ status: getToken() ? 'checking' : 'guest', user: null }))
 
   // При открытии сайта проверяем сохранённый токен
   useEffect(() => {
-    if (!tokenStore.get()) return
+    if (!getToken()) return
     api
       .me()
-      .then((user) => setState({ status: 'user', user }))
-      .catch(() => {
-        tokenStore.set(null)
-        setState({ status: 'guest', user: null })
-      })
+      .then((r) => setState({ status: 'user', user: r.user }))
+      .catch(() => setState({ status: 'guest', user: null }))
   }, [])
 
   // Сервер ответил 401 на любой запрос — разлогиниваем
@@ -27,23 +25,18 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('tildes:logout', onLogout)
   }, [])
 
-  const signIn = useCallback(({ token, user }) => {
-    tokenStore.set(token)
-    setState({ status: 'user', user })
-    return user
+  // Ответ login/register: { token, user, redirect? }. Токен сохраняет api-клиент.
+  const signIn = useCallback((res) => {
+    setState({ status: 'user', user: res.user })
+    return res
   }, [])
 
   const actions = useMemo(
     () => ({
       login: async (email, password) => signIn(await api.login(email, password)),
-      register: async (email, password, name) => signIn(await api.register(email, password, name)),
+      register: async (email, password, name) => signIn(await api.register({ email, password, name })),
       logout: async () => {
-        try {
-          await api.logout()
-        } catch {
-          /* токен уже недействителен — всё равно выходим */
-        }
-        tokenStore.set(null)
+        await api.logout().catch(() => {}) // токен уже недействителен — всё равно выходим
         setState({ status: 'guest', user: null })
       },
     }),

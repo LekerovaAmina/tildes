@@ -17,7 +17,7 @@ export default function RequireAuth() {
     )
   }
   if (status !== 'user') {
-    return <Navigate to="/login" replace state={{ from: location.pathname + location.search + location.hash }} />
+    return <Navigate to="/auth" replace state={{ from: location.pathname + location.search + location.hash }} />
   }
   return (
     <ProgressProvider key={user.id}>

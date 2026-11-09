@@ -1,60 +1,77 @@
 // Клиент API Django-бэкенда (backend/learning/urls.py).
-// В разработке Vite проксирует /api на http://127.0.0.1:8000 (vite.config.js).
+// В разработке Vite проксирует /api и /admin на http://127.0.0.1:8000 (vite.config.js).
 // Для продакшена укажите адрес бэкенда в VITE_API_URL (см. .env.example).
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
-// Токен входа (POST /api/auth/login/) хранится в браузере и уходит в заголовке Authorization
-const TOKEN_KEY = 'tildes-token'
+// Адрес страницы на бэкенде (например, админки /admin/)
+export const serverUrl = (path) => `${BASE}${path}`
 
-export const tokenStore = {
-  get() {
-    try {
-      return localStorage.getItem(TOKEN_KEY)
-    } catch {
-      return null
-    }
-  },
-  set(token) {
-    try {
-      if (token) localStorage.setItem(TOKEN_KEY, token)
-      else localStorage.removeItem(TOKEN_KEY)
-    } catch {
-      /* приватный режим — токен живёт до перезагрузки */
-    }
-  },
-}
+const DEVICE_KEY = 'tildes-device-id'
 
-// Ошибка API с текстом от сервера (для форм входа и регистрации)
-export class ApiError extends Error {
-  constructor(status, data) {
-    super(firstMessage(data) || `Ошибка ${status}`)
-    this.status = status
-    this.data = data
+// id устройства: бэкенд переносит анонимный прогресс устройства в аккаунт при регистрации
+function deviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(DEVICE_KEY, id)
+    }
+    return id
+  } catch {
+    return 'anonymous'
   }
 }
 
-function firstMessage(data) {
-  if (!data || typeof data !== 'object') return ''
+// Токен входа (POST /api/auth/login/ или /register/, backend/learning/auth.py)
+const TOKEN_KEY = 'tildes-auth-token'
+
+export function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+function setToken(token) {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token)
+    else localStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* приватный режим — токен живёт до перезагрузки */
+  }
+}
+
+// Понятный текст ошибки от сервера (для форм входа и регистрации)
+export function errorText(err) {
+  const data = err?.data
+  if (!data) return err?.status ? `Ошибка сервера (${err.status})` : 'Нет связи с сервером. Запустите бэкенд (backend/run.bat).'
   if (typeof data.detail === 'string') return data.detail
-  const v = Object.values(data)[0]
-  return Array.isArray(v) ? String(v[0]) : typeof v === 'string' ? v : ''
+  return Object.values(data).flat().join(' ')
 }
 
 async function request(path, { method = 'GET', body } = {}) {
-  const headers = { 'Content-Type': 'application/json' }
-  const token = tokenStore.get()
+  const headers = { 'Content-Type': 'application/json', 'X-Device-Id': deviceId() }
+  const token = getToken()
   if (token) headers.Authorization = `Token ${token}`
-
-  const res = await fetch(`${BASE}/api${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined })
-  const data = await res.json().catch(() => null)
-  if (res.status === 401 && token) {
-    // токен устарел или удалён — просим войти заново
-    tokenStore.set(null)
-    window.dispatchEvent(new Event('tildes:logout'))
+  const res = await fetch(`${BASE}/api${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) {
+    const err = new Error(`API ${method} ${path}: ${res.status}`)
+    err.status = res.status
+    err.data = await res.json().catch(() => null)
+    // Токен устарел или удалён — сайт просит войти заново (store/auth.jsx)
+    if (token && (res.status === 401 || res.status === 403)) {
+      setToken(null)
+      window.dispatchEvent(new Event('tildes:logout'))
+    }
+    throw err
   }
-  if (!res.ok) throw new ApiError(res.status, data)
-  return data
+  return res.json()
 }
 
 // Изменяющие запросы (ответы на карточки и т.п.) отправляем строго по очереди:
@@ -68,11 +85,11 @@ function write(path, body, method = 'POST') {
 }
 
 export const api = {
-  register: (email, password, name) => request('/auth/register/', { method: 'POST', body: { email, password, name } }),
-  login: (email, password) => request('/auth/login/', { method: 'POST', body: { email, password } }),
-  logout: () => request('/auth/logout/', { method: 'POST' }),
+  register: (data) => request('/auth/register/', { method: 'POST', body: data }).then((r) => (setToken(r.token), r)),
+  login: (email, password) =>
+    request('/auth/login/', { method: 'POST', body: { email, password } }).then((r) => (setToken(r.token), r)),
+  logout: () => request('/auth/logout/', { method: 'POST' }).finally(() => setToken(null)),
   me: () => request('/auth/me/'),
-
   levels: () => request('/levels/'),
   modules: (level = 'b2') => request(`/levels/${level}/modules/`),
   content: (level = 'b2') => request(`/levels/${level}/content/`),

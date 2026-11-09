@@ -1,12 +1,14 @@
-import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { errorText, serverUrl } from '../api/client.js'
 import { Logo } from '../components/Layout.jsx'
 import Icon from '../components/Icon.jsx'
 import { useAuth } from '../store/auth.jsx'
 
-// Страница входа и регистрации: /login и /register
-export default function AuthPage({ mode = 'login' }) {
-  const isRegister = mode === 'register'
+// Страница входа и регистрации: /auth (вход) и /auth?mode=register. Работает с /api/auth/* (backend/learning/auth.py).
+export default function AuthPage() {
+  const [params] = useSearchParams()
+  const isRegister = params.get('mode') === 'register'
   const { status, user, login, register } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -15,6 +17,9 @@ export default function AuthPage({ mode = 'login' }) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+
+  // Переключили вкладку — старая ошибка больше не к месту
+  useEffect(() => setError(''), [isRegister])
 
   // Куда вести после входа: на страницу, с которой отправили на вход, иначе — к выбору уровня или на главную
   const after = (u) => location.state?.from || (u.level ? '/home' : '/')
@@ -28,12 +33,17 @@ export default function AuthPage({ mode = 'login' }) {
     setError('')
     setSending(true)
     try {
-      const u = isRegister
+      const res = isRegister
         ? await register(form.email.trim(), form.password, form.name.trim())
         : await login(form.email.trim(), form.password)
-      navigate(after(u), { replace: true })
+      // Администратор / редактор — сразу в админку Django (сессию бэкенд уже открыл)
+      if (res.redirect) {
+        window.location.href = serverUrl(res.redirect)
+        return
+      }
+      navigate(after(res.user), { replace: true })
     } catch (err) {
-      setError(err.status ? err.message : 'Нет связи с сервером. Запустите бэкенд (backend/run.bat).')
+      setError(errorText(err))
     } finally {
       setSending(false)
     }
@@ -59,10 +69,10 @@ export default function AuthPage({ mode = 'login' }) {
         </div>
         <form className="auth-card card" onSubmit={submit} noValidate>
           <div className="auth-tabs" role="tablist">
-            <Link to="/login" state={location.state} replace role="tab" aria-selected={!isRegister} className={!isRegister ? 'active' : ''}>
+            <Link to="/auth" state={location.state} replace role="tab" aria-selected={!isRegister} className={!isRegister ? 'active' : ''}>
               Вход
             </Link>
-            <Link to="/register" state={location.state} replace role="tab" aria-selected={isRegister} className={isRegister ? 'active' : ''}>
+            <Link to="/auth?mode=register" state={location.state} replace role="tab" aria-selected={isRegister} className={isRegister ? 'active' : ''}>
               Регистрация
             </Link>
           </div>
@@ -99,7 +109,7 @@ export default function AuthPage({ mode = 'login' }) {
                 onChange={set('password')}
                 autoComplete={isRegister ? 'new-password' : 'current-password'}
                 required
-                placeholder={isRegister ? 'Не меньше 8 символов' : ''}
+                placeholder={isRegister ? 'Минимум 8 символов, не только цифры' : ''}
               />
               <button
                 type="button"
@@ -124,7 +134,7 @@ export default function AuthPage({ mode = 'login' }) {
 
           <p className="auth-switch muted">
             {isRegister ? 'Уже есть аккаунт? ' : 'Нет аккаунта? '}
-            <Link to={isRegister ? '/login' : '/register'} state={location.state} replace>
+            <Link to={isRegister ? '/auth' : '/auth?mode=register'} state={location.state} replace>
               {isRegister ? 'Войти' : 'Зарегистрироваться'}
             </Link>
           </p>
