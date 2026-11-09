@@ -1,8 +1,12 @@
 from django.urls import path
 
-from . import views
+from . import auth_views, views
 
 urlpatterns = [
+    path('auth/register/', auth_views.register),
+    path('auth/login/', auth_views.login),
+    path('auth/logout/', auth_views.logout),
+    path('auth/me/', auth_views.me),
     path('levels/', views.levels),
     path('levels/<str:code>/modules/', views.level_modules),
     path('levels/<str:code>/content/', views.level_content),

@@ -1,9 +1,10 @@
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotAuthenticated, NotFound, ValidationError
 from rest_framework.response import Response
 
 from . import services
@@ -39,7 +40,11 @@ READ_FIELDS = {'words': 'words_read', 'grammar': 'grammar_read', 'text': 'text_r
 
 
 def get_user(request):
-    """MVP без регистрации: фронтенд генерирует id устройства и шлёт его в X-Device-Id."""
+    """Вошедший пользователь (токен). Если включён ALLOW_DEVICE_USERS — ещё и устройство по X-Device-Id."""
+    if request.user and request.user.is_authenticated:
+        return request.user
+    if not settings.ALLOW_DEVICE_USERS:
+        raise NotAuthenticated('Войдите в аккаунт')
     device_id = request.headers.get('X-Device-Id', '').strip()
     if not device_id:
         raise ValidationError({'detail': 'Нужен заголовок X-Device-Id'})
@@ -322,8 +327,11 @@ def progress_reset(request):
 
 @api_view(['GET'])
 def leaderboard(request):
-    device_id = request.headers.get('X-Device-Id', '').strip()[:64]
-    my_email = services.device_email(device_id) if device_id else None
+    if request.user and request.user.is_authenticated:
+        my_email = request.user.email
+    else:
+        device_id = request.headers.get('X-Device-Id', '').strip()[:64]
+        my_email = services.device_email(device_id) if device_id and settings.ALLOW_DEVICE_USERS else None
     top = User.objects.filter(is_active=True, role=User.Role.STUDENT).order_by('-points', 'date_joined')[:50]
     return Response([
         {'place': i + 1, 'name': u.display_name or 'Аноним', 'points': u.points, 'me': u.email == my_email}

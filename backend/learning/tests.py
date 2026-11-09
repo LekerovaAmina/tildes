@@ -1,6 +1,6 @@
 from django.core.management import call_command
 from django.db import connection
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from .models import (
@@ -39,6 +39,7 @@ class SchemaTests(TestCase):
         self.assertFalse({'listening_tasks', 'speaking_tasks', 'writing_tasks'} & tables)
 
 
+@override_settings(ALLOW_DEVICE_USERS=True)
 class ApiTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -186,3 +187,50 @@ class AdminTests(TestCase):
                      'learning/grammarrule/1/change/', 'learning/quizquestion/1/change/', 'learning/auditlog/',
                      'learning/mediafile/add/', 'learning/pointtransaction/']:
             self.assertEqual(self.client.get('/admin/' + path).status_code, 200, path)
+
+
+class AuthTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('load_content', verbosity=0)
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def register(self, email='aigerim@example.com', password='Qazaq-tili-2026', name='Айгерим'):
+        return self.client.post('/api/auth/register/', {'email': email, 'password': password, 'name': name}, format='json')
+
+    def test_register_login_me_logout(self):
+        r = self.register()
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()['user']['name'], 'Айгерим')
+
+        r = self.client.post('/api/auth/login/', {'email': 'AIGERIM@example.com', 'password': 'Qazaq-tili-2026'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        token = r.json()['token']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+        self.assertEqual(self.client.get('/api/auth/me/').json()['email'], 'aigerim@example.com')
+
+        self.assertEqual(self.client.post('/api/auth/logout/').status_code, 200)
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
+
+    def test_bad_credentials_and_duplicates(self):
+        self.register()
+        self.assertEqual(self.register().status_code, 400)  # такой email уже есть
+        r = self.client.post('/api/auth/login/', {'email': 'aigerim@example.com', 'password': 'wrong'}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(self.register(email='new@example.com', password='123').status_code, 400)  # слабый пароль
+
+    def test_progress_requires_login(self):
+        self.assertEqual(self.client.get('/api/progress/').status_code, 401)
+        # даже с X-Device-Id, пока устройства выключены
+        self.assertEqual(APIClient(HTTP_X_DEVICE_ID='dev').get('/api/progress/').status_code, 401)
+
+    def test_progress_belongs_to_user(self):
+        token = self.register().json()['token']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+        word = Word.objects.filter(status='published').first()
+        self.client.post('/api/cards/answer/', {'word_id': word.id, 'result': 'learned'}, format='json')
+        self.assertEqual(self.client.get('/api/progress/').json()['points'], 10)
+        board = self.client.get('/api/leaderboard/').json()
+        self.assertTrue(any(row['me'] and row['name'] == 'Айгерим' for row in board))

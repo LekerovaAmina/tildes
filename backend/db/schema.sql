@@ -327,4 +327,14 @@ CREATE INDEX quiz_attempt_answers_option_idx   ON quiz_attempt_answers (option_i
 --    writing_tasks   — письмо (Жазылым): задания, образцы, критерии
 -- ---------------------------------------------------------------------
 
+-- ---------------------------------------------------------------------
+--  Вход по токену (Django REST framework, приложение rest_framework.authtoken)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE authtoken_token (
+    key       varchar(40) PRIMARY KEY,
+    created   timestamptz NOT NULL DEFAULT now(),
+    user_id   bigint      NOT NULL UNIQUE REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+);
+
 COMMIT;

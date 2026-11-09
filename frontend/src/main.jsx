@@ -3,17 +3,17 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { ContentProvider } from './store/content.jsx'
-import { ProgressProvider } from './store/progress.jsx'
+import { AuthProvider } from './store/auth.jsx'
 import './styles.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ContentProvider>
-        <ProgressProvider>
+      <AuthProvider>
+        <ContentProvider>
           <App />
-        </ProgressProvider>
-      </ContentProvider>
+        </ContentProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 )

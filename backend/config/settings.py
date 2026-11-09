@@ -13,8 +13,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Локальные настройки (пароль PostgreSQL и т.п.) — из backend/.env, см. .env.example. Файл в .gitignore.
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -39,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'learning',
 ]
@@ -164,13 +170,18 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_HEADERS = [
     'accept',
+    'authorization',
     'content-type',
     'x-device-id',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer', 'rest_framework.renderers.BrowsableAPIRenderer'],
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    # Вход по токену: фронтенд шлёт заголовок Authorization: Token <key> (см. learning/auth_views.py)
+    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.TokenAuthentication'],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
-    'UNAUTHENTICATED_USER': None,
 }
+
+# Анонимные «пользователи устройства» по заголовку X-Device-Id (как в MVP до регистрации).
+# Выключено: теперь на сайт входят по email и паролю. Включается для тестов и отладки.
+ALLOW_DEVICE_USERS = os.environ.get('ALLOW_DEVICE_USERS', '0') == '1'

@@ -54,7 +54,7 @@ backend/
 
 ## База данных
 
-23 таблицы (имена совпадают с макетом), плюс служебные таблицы Django (`django_*`, `auth_*`).
+23 таблицы (имена совпадают с макетом), плюс служебные таблицы Django (`django_*`, `auth_*`) и `authtoken_token` — токены входа.
 
 | Группа | Таблицы |
 |---|---|
@@ -69,18 +69,37 @@ backend/
 - `users.points` — сумма записей `point_transactions` (хранится для быстрого рейтинга).
 - В `content.json` у модуля 4 урока заданы только названиями, поэтому слова, грамматика, текст и тест модуля загружаются в его первый урок. Их можно разнести по урокам в админке — API соберёт тему обратно.
 
-**PostgreSQL:** `pip install -r requirements-postgres.txt` (нужен интернет), затем задайте `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (и при необходимости `POSTGRES_HOST`, `POSTGRES_PORT`) и выполните `python manage.py migrate` и `python manage.py load_content`. Без `POSTGRES_DB` используется SQLite.
+**PostgreSQL:**
+
+1. В pgAdmin создайте пользователя (Login/Group Role) `tildes` с паролем и правом входа (Can login), затем базу `tildes` с владельцем `tildes`.
+2. Скопируйте `.env.example` в `.env` (рядом с `manage.py`) и впишите пароль в `POSTGRES_PASSWORD`. Файл `.env` в git не попадает.
+3. Поставьте драйвер — под Windows он уже лежит в `wheels/`:
+   ```bash
+   .venv\Scripts\python -m pip install --find-links wheels -r requirements-postgres.txt
+   ```
+4. Создайте таблицы и загрузите контент: `python manage.py migrate`, затем `python manage.py load_content`.
+5. Создайте администратора: `python manage.py createsuperuser` (email и пароль).
+
+Без `POSTGRES_DB` в `.env` используется SQLite.
 
 **Обновление со старой версии:** схема создана заново, старый `db.sqlite3` несовместим — удалите его и снова запустите `setup`.
 
-## Пользователь
+## Пользователи и вход
 
-Регистрации пока нет. Фронтенд генерирует id устройства и отправляет его в заголовке `X-Device-Id` — по нему создаётся запись в `users` с техническим email `<id>@device.tildes.local` и без пароля. Сотрудники входят в админку по email и паролю (`python manage.py createsuperuser`). Роль `editor` может менять только контент.
+Ученики регистрируются и входят на сайте по email и паролю (`/api/auth/register/`, `/api/auth/login/`). В ответ приходит токен, фронтенд отправляет его в заголовке `Authorization: Token <токен>`. Пароль проверяют стандартные валидаторы Django: минимум 8 символов, не слишком простой, не похож на email.
+
+Сотрудники входят в админку `/admin/` тем же email и паролем. Админа создаёт `python manage.py createsuperuser`. Роль `editor` может менять только контент, роль меняется в админке.
+
+Старый режим «пользователь устройства» (заголовок `X-Device-Id`, без пароля) выключен. Он нужен только тестам: включается переменной `ALLOW_DEVICE_USERS=1`.
 
 ## API
 
 | Метод | Путь | Описание |
 |---|---|---|
+| POST | `/api/auth/register/` | `{email, password, name}` → `{token, user}` |
+| POST | `/api/auth/login/` | `{email, password}` → `{token, user}` |
+| POST | `/api/auth/logout/` | удалить токен (выход) |
+| GET | `/api/auth/me/` | текущий пользователь |
 | GET | `/api/levels/` | уровни A1–C1 (`available` — открыт ли) |
 | GET | `/api/levels/b2/modules/` | список модулей уровня |
 | GET | `/api/levels/b2/content/` | весь контент уровня одним запросом (так грузит фронтенд) |
@@ -94,11 +113,11 @@ backend/
 | POST | `/api/progress/reset/` | сбросить прогресс |
 | GET | `/api/leaderboard/` | топ‑50 по баллам |
 
-Все запросы (кроме контента) требуют заголовок `X-Device-Id`.
+Запросы прогресса, карточек и тестов требуют входа (заголовок `Authorization: Token …`), иначе ответ 401. Контент и рейтинг доступны без входа.
 
 ## Баллы
 
-«Я выучил» +10, «Учить ещё раз» +2, тема впервые +30, повтор +10, тест +5 за каждый правильный ответ сверх лучшего результата. Меняются в `learning/services.py` (`POINTS`) — и в `frontend/src/store/progress.jsx`, пока фронт считает локально.
+«Я выучил» +10, «Учить ещё раз» +2, тема впервые +30, повтор +10, тест +5 за каждый правильный ответ сверх лучшего результата. Меняются в `learning/services.py` (`POINTS`), а для показа на сайте ещё и в `frontend/src/store/progress.jsx`.
 
 ## Перед продакшеном
 
