@@ -1,6 +1,6 @@
 from django.core.management import call_command
 from django.db import connection
-from django.test import TestCase
+from django.test import Client, TestCase
 from rest_framework.test import APIClient
 
 from .models import (
@@ -248,3 +248,16 @@ class AuthApiTests(TestCase):
         self.assertNotIn('redirect', r.data)
         self.assertFalse(r.data['user']['is_staff'])
         self.assertEqual(self.client.get('/admin/').status_code, 302)  # на страницу входа админки
+
+    def test_admin_login_through_frontend_address(self):
+        """Админка через прокси Vite: форма входа приходит с Origin http://localhost:5173 — не 403."""
+        User.objects.create_superuser('boss@b.kz', 'Qazaq-Til-2026')
+        browser = Client(enforce_csrf_checks=True)
+        browser.get('/admin/login/')
+        r = browser.post(
+            '/admin/login/?next=/admin/',
+            {'username': 'boss@b.kz', 'password': 'Qazaq-Til-2026', 'csrfmiddlewaretoken': browser.cookies['csrftoken'].value},
+            HTTP_ORIGIN='http://localhost:5173',
+        )
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.url, '/admin/')

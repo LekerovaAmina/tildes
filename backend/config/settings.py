@@ -168,6 +168,12 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
+# Админка открывается и через адрес фронтенда (Vite проксирует /admin, vite.config.js):
+# без этого Django отклоняет форму входа в админку — «Origin checking failed» (403).
+# Для продакшена добавьте адрес сайта: CSRF_TRUSTED_ORIGINS=https://tildes.kz,https://www.tildes.kz
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS + [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
 CORS_ALLOW_HEADERS = [
     'accept',
     'content-type',
