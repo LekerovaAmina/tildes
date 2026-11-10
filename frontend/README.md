@@ -31,17 +31,17 @@ npm run dev
 
 ## Админ-панель (`src/panel/`)
 
-Сделана по макету Figma «Tildes — админ-панель» и работает с `/api/panel/*` бэкенда. Открыта только админам и редакторам: после входа сотрудник сразу попадает в `/panel`, а с сайта туда ведёт кнопка «Админка» в шапке.
+Сделана по макету Figma «Tildes — админ-панель» и работает с `/api/panel/*` бэкенда. Открыта только админам и редакторам: после входа сотрудник сразу попадает в `/admin`, а с сайта туда ведёт кнопка «Админка» в шапке.
 
 | Путь | Экран макета |
 |---|---|
-| `/panel` | 1 · Дашборд |
-| `/panel/levels/:code` | 2 · Уровни и модули |
-| `/panel/lessons/:id` | 3 · Конструктор урока и 3а · «Добавить блок» |
-| `/panel/lessons/:id/cards` | 4 · Карточки слов |
-| `/panel/lessons/:id/grammar` | 5 · Грамматика |
-| `/panel/lessons/:id/text` | 6 · Текст и тест |
-| `/panel/listening`, `/speaking`, `/writing` | 7–9 · разделы в разработке |
+| `/admin` | 1 · Дашборд |
+| `/admin/levels/:code` | 2 · Уровни и модули |
+| `/admin/lessons/:id` | 3 · Конструктор урока и 3а · «Добавить блок» |
+| `/admin/lessons/:id/cards` | 4 · Карточки слов |
+| `/admin/lessons/:id/grammar` | 5 · Грамматика |
+| `/admin/lessons/:id/text` | 6 · Текст и тест |
+| `/admin/listening`, `/speaking`, `/writing` | 7–9 · разделы в разработке |
 
 Админ для разработки: **admin@admin.com / admin123** (создаёт `backend/setup.bat`, вернуть можно командой `python manage.py ensure_admin --reset-password`).
 

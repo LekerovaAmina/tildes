@@ -5,7 +5,7 @@ import { Badge, Loading, PageHead, formatWhen, useCrumbs, useLoad } from '../ui.
 
 // 1 · Дашборд
 export default function Dashboard() {
-  useCrumbs([{ label: 'Админ-панель', to: '/panel' }, { label: 'Дашборд' }])
+  useCrumbs([{ label: 'Админ-панель', to: '/admin' }, { label: 'Дашборд' }])
   const { data, error, reload } = useLoad(() => panelApi.dashboard('B2'), [])
 
   return (
@@ -14,7 +14,7 @@ export default function Dashboard() {
         <a href="/home" target="_blank" rel="noreferrer" className="p-btn">
           <Icon name="eye" size={18} /> Предпросмотр сайта
         </a>
-        <Link to="/panel/levels/B2" className="p-btn p-btn-primary">
+        <Link to="/admin/levels/B2" className="p-btn p-btn-primary">
           <Icon name="plus" size={18} /> Новый урок
         </Link>
       </PageHead>
@@ -36,7 +36,7 @@ export default function Dashboard() {
               <p className="p-muted">Сколько модулей опубликовано на каждом уровне</p>
               <div className="p-coverage">
                 {data.coverage.map((lv) => (
-                  <Link to={`/panel/levels/${lv.code}`} key={lv.code} className="p-coverage-row">
+                  <Link to={`/admin/levels/${lv.code}`} key={lv.code} className="p-coverage-row">
                     <span className={`p-level-code ${lv.is_published ? 'on' : ''}`}>{lv.code}</span>
                     <span className="p-coverage-name">
                       <b>{lv.title_kz}</b>
@@ -60,7 +60,7 @@ export default function Dashboard() {
               <div className="p-drafts">
                 {data.drafts.length === 0 && <p className="p-muted p-drafts-empty">Черновиков нет — всё опубликовано</p>}
                 {data.drafts.map((d) => (
-                  <Link to={`/panel/lessons/${d.id}`} key={d.id} className="p-draft">
+                  <Link to={`/admin/lessons/${d.id}`} key={d.id} className="p-draft">
                     <span className="p-draft-icon">
                       <Icon name="pen" size={16} />
                     </span>
@@ -104,7 +104,7 @@ export default function Dashboard() {
                 <h2>Последние изменения</h2>
                 <p className="p-muted">Из журнала audit_log: правки в панели и в Django-админке</p>
               </div>
-              <a href="/admin/learning/auditlog/" className="p-btn">
+              <a href="/django-admin/learning/auditlog/" className="p-btn">
                 Вся история
               </a>
             </div>

@@ -85,7 +85,7 @@ export default function CardsEditor() {
         <span className="p-chip">
           Модуль: <b>{lesson.module_number}</b>
         </span>
-        <Link to={`/panel/lessons/${id}`} className="p-chip">
+        <Link to={`/admin/lessons/${id}`} className="p-chip">
           Урок: <b>{lesson.letter}</b> · {lesson.title_kz}
         </Link>
         <label className="p-chip">

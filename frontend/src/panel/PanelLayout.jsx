@@ -37,7 +37,7 @@ export default function PanelLayout() {
   return (
     <div className="panel">
       <aside className={`p-side ${menuOpen ? 'open' : ''}`}>
-        <Link to="/panel" className="p-brand">
+        <Link to="/admin" className="p-brand">
           <span className="logo-mark">T</span>
           <span>
             <b>Tildes</b>
@@ -47,21 +47,21 @@ export default function PanelLayout() {
 
         <nav className="p-nav">
           <span className="p-nav-group">Обзор</span>
-          <NavLink to="/panel" end className="p-nav-link">
+          <NavLink to="/admin" end className="p-nav-link">
             <Icon name="home" size={18} /> Дашборд
           </NavLink>
           <span className="p-nav-group">Контент</span>
-          <NavLink to="/panel/levels" className={({ isActive }) => `p-nav-link ${isActive || location.pathname.startsWith('/panel/lessons') ? 'active' : ''}`}>
+          <NavLink to="/admin/levels" className={({ isActive }) => `p-nav-link ${isActive || location.pathname.startsWith('/admin/lessons') ? 'active' : ''}`}>
             <Icon name="layers" size={18} /> Уровни и модули
           </NavLink>
           <span className="p-nav-group">Скоро</span>
-          <NavLink to="/panel/listening" className="p-nav-link">
+          <NavLink to="/admin/listening" className="p-nav-link">
             <Icon name="headphones" size={18} /> Аудирование
           </NavLink>
-          <NavLink to="/panel/speaking" className="p-nav-link">
+          <NavLink to="/admin/speaking" className="p-nav-link">
             <Icon name="mic" size={18} /> Говорение
           </NavLink>
-          <NavLink to="/panel/writing" className="p-nav-link">
+          <NavLink to="/admin/writing" className="p-nav-link">
             <Icon name="pen" size={18} /> Письмо
           </NavLink>
         </nav>
@@ -80,7 +80,7 @@ export default function PanelLayout() {
           <Link to="/home">
             <Icon name="external" size={14} /> На сайт
           </Link>
-          <a href={serverUrl('/admin/')}>
+          <a href={serverUrl('/django-admin/')}>
             <Icon name="external" size={14} /> Django-админка
           </a>
         </div>
@@ -101,7 +101,7 @@ export default function PanelLayout() {
             ))}
           </nav>
           <Search />
-          <Link to="/panel/levels/B2" className="p-level-chip">
+          <Link to="/admin/levels/B2" className="p-level-chip">
             Уровень: B2
           </Link>
         </header>
@@ -162,14 +162,14 @@ function Search() {
           {empty && <p className="p-muted">Ничего не нашлось</p>}
           {res.lessons.length > 0 && <span className="p-drop-group">Уроки</span>}
           {res.lessons.map((l) => (
-            <button key={`l${l.id}`} onClick={() => go(`/panel/lessons/${l.id}`)}>
+            <button key={`l${l.id}`} onClick={() => go(`/admin/lessons/${l.id}`)}>
               <b>{l.title}</b>
               <small>{l.where}</small>
             </button>
           ))}
           {res.words.length > 0 && <span className="p-drop-group">Слова</span>}
           {res.words.map((w) => (
-            <button key={`w${w.id}`} onClick={() => go(`/panel/lessons/${w.lesson_id}/cards?word=${w.id}`)}>
+            <button key={`w${w.id}`} onClick={() => go(`/admin/lessons/${w.lesson_id}/cards?word=${w.id}`)}>
               <b>{w.kz}</b> — {w.ru}
               <small>{w.where}</small>
             </button>

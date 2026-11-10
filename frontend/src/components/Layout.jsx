@@ -47,7 +47,7 @@ export default function Layout() {
               <Icon name="star" size={14} /> {points}
             </Link>
             {user.is_staff && (
-              <Link to="/panel" className="chip chip-admin" title="Админ-панель">
+              <Link to="/admin" className="chip chip-admin" title="Админ-панель">
                 Админка
               </Link>
             )}

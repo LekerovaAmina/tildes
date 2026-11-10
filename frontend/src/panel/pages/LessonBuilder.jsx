@@ -19,12 +19,12 @@ export default function LessonBuilder() {
   useCrumbs(
     lesson
       ? [
-          { label: 'Уровни и модули', to: '/panel/levels' },
-          { label: lesson.level.code, to: `/panel/levels/${lesson.level.code}` },
-          { label: `Модуль ${lesson.module.number}`, to: `/panel/levels/${lesson.level.code}` },
+          { label: 'Уровни и модули', to: '/admin/levels' },
+          { label: lesson.level.code, to: `/admin/levels/${lesson.level.code}` },
+          { label: `Модуль ${lesson.module.number}`, to: `/admin/levels/${lesson.level.code}` },
           { label: `Урок ${lesson.letter}${lesson.status === 'published' ? '' : ' · ' + STATUS[lesson.status].label.toLowerCase()}` },
         ]
-      : [{ label: 'Уровни и модули', to: '/panel/levels' }, { label: 'Урок' }]
+      : [{ label: 'Уровни и модули', to: '/admin/levels' }, { label: 'Урок' }]
   )
 
   // Форма настроек заполняется из урока (и после каждого сохранения)
@@ -87,7 +87,7 @@ export default function LessonBuilder() {
   const removeLesson = async () => {
     if (!window.confirm(`Удалить урок «${lesson.title_kz}» вместе со всем содержимым?`)) return
     await panelApi.deleteLesson(id)
-    navigate(`/panel/levels/${lesson.level.code}`)
+    navigate(`/admin/levels/${lesson.level.code}`)
   }
 
   const removeBlock = (type) => {
@@ -293,7 +293,7 @@ export default function LessonBuilder() {
   )
 }
 
-const editorPath = (lessonId, type) => `/panel/lessons/${lessonId}/${BLOCKS[type].path}`
+const editorPath = (lessonId, type) => `/admin/lessons/${lessonId}/${BLOCKS[type].path}`
 
 function missingText(missing) {
   const names = { cards: 'карточек', grammar: 'грамматики', text: 'текста', quiz: 'теста' }

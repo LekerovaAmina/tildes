@@ -6,7 +6,8 @@ from django.urls import include, path
 admin.site.site_header = 'Tildes — администрирование'
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Стандартная Django-админка. Адрес /admin занят админ-панелью сайта (frontend/src/panel)
+    path('django-admin/', admin.site.urls),
     path('api/', include('learning.urls')),
 ]
 

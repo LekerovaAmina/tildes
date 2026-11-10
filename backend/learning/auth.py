@@ -119,7 +119,7 @@ def login(request):
     if user.is_staff:
         # Админка Django работает на сессии: открываем её сразу, чтобы не вводить пароль второй раз
         django_login(request._request, user)
-        response.data['redirect'] = '/admin/'
+        response.data['redirect'] = '/django-admin/'
     return response
 
 

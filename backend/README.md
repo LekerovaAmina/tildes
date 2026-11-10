@@ -30,7 +30,7 @@ python manage.py runserver 8000
 ```
 
 - API: http://127.0.0.1:8000/api/levels/
-- Админка (редактирование слов, тем, вопросов): http://127.0.0.1:8000/admin/ — сначала `python manage.py createsuperuser`
+- Админка (редактирование слов, тем, вопросов): http://127.0.0.1:8000/django-admin/ — сначала `python manage.py createsuperuser`
 - Тесты: `python manage.py test learning`
 
 ## Структура
@@ -103,7 +103,7 @@ backend/
 
 ## API админ-панели
 
-Для экрана `/panel` на фронтенде (макет Figma «Tildes — админ-панель»), код в `learning/panel_api.py`. Доступ только у admin и editor, с заголовком `Authorization: Token …`. Все изменения пишутся в `audit_log`.
+Для экрана `/admin` на фронтенде (макет Figma «Tildes — админ-панель»), код в `learning/panel_api.py`. Доступ только у admin и editor, с заголовком `Authorization: Token …`. Все изменения пишутся в `audit_log`.
 
 | Метод | Путь | Что делает |
 |---|---|---|

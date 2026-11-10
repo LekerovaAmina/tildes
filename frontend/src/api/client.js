@@ -1,10 +1,10 @@
 // Клиент API Django-бэкенда (backend/learning/urls.py).
-// В разработке Vite проксирует /api и /admin на http://127.0.0.1:8000 (vite.config.js).
+// В разработке Vite проксирует /api и /django-admin на http://127.0.0.1:8000 (vite.config.js).
 // Для продакшена укажите адрес бэкенда в VITE_API_URL (см. .env.example).
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
-// Адрес страницы на бэкенде (например, админки /admin/)
+// Адрес страницы на бэкенде (например, Django-админки /django-admin/)
 export const serverUrl = (path) => `${BASE}${path}`
 
 const DEVICE_KEY = 'tildes-device-id'

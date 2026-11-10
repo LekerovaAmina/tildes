@@ -171,7 +171,7 @@ class AdminTests(TestCase):
         admin = User.objects.create_superuser('a@example.com', 'pass-12345')
         self.client.force_login(admin)
         word = Word.objects.first()
-        r = self.client.post(f'/admin/learning/word/{word.id}/change/', {
+        r = self.client.post(f'/django-admin/learning/word/{word.id}/change/', {
             'lesson': word.lesson_id, 'kz': word.kz, 'ru': 'новый перевод', 'transcription': '',
             'part_of_speech': '', 'example_kz': '', 'example_ru': '', 'sort_order': word.sort_order,
             'status': 'published',
@@ -186,7 +186,7 @@ class AdminTests(TestCase):
         for path in ['', 'learning/user/', 'learning/user/add/', 'learning/module/', 'learning/lesson/1/change/',
                      'learning/grammarrule/1/change/', 'learning/quizquestion/1/change/', 'learning/auditlog/',
                      'learning/mediafile/add/', 'learning/pointtransaction/']:
-            self.assertEqual(self.client.get('/admin/' + path).status_code, 200, path)
+            self.assertEqual(self.client.get('/django-admin/' + path).status_code, 200, path)
 
 
 class AuthApiTests(TestCase):
@@ -238,30 +238,30 @@ class AuthApiTests(TestCase):
         User.objects.create_superuser('boss@b.kz', 'Qazaq-Til-2026')
         r = self.client.post('/api/auth/login/', {'email': 'boss@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.data['redirect'], '/admin/')
+        self.assertEqual(r.data['redirect'], '/django-admin/')
         self.assertTrue(r.data['user']['is_staff'])
         # Сессия открыта — админка пускает без повторного входа
-        self.assertEqual(self.client.get('/admin/').status_code, 200)
+        self.assertEqual(self.client.get('/django-admin/').status_code, 200)
 
     def test_student_login_has_no_redirect(self):
         self.client.post('/api/auth/register/', {'email': 's@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
         r = self.client.post('/api/auth/login/', {'email': 's@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
         self.assertNotIn('redirect', r.data)
         self.assertFalse(r.data['user']['is_staff'])
-        self.assertEqual(self.client.get('/admin/').status_code, 302)  # на страницу входа админки
+        self.assertEqual(self.client.get('/django-admin/').status_code, 302)  # на страницу входа админки
 
     def test_admin_login_through_frontend_address(self):
         """Админка через прокси Vite: форма входа приходит с Origin http://localhost:5173 — не 403."""
         User.objects.create_superuser('boss@b.kz', 'Qazaq-Til-2026')
         browser = Client(enforce_csrf_checks=True)
-        browser.get('/admin/login/')
+        browser.get('/django-admin/login/')
         r = browser.post(
-            '/admin/login/?next=/admin/',
+            '/django-admin/login/?next=/django-admin/',
             {'username': 'boss@b.kz', 'password': 'Qazaq-Til-2026', 'csrfmiddlewaretoken': browser.cookies['csrftoken'].value},
             HTTP_ORIGIN='http://localhost:5173',
         )
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(r.url, '/admin/')
+        self.assertEqual(r.url, '/django-admin/')
 
     @override_settings(DEBUG=True)
     def test_ensure_admin_creates_default_admin(self):
@@ -271,7 +271,7 @@ class AuthApiTests(TestCase):
         self.assertTrue(admin.is_superuser and admin.is_staff)
         self.assertTrue(admin.check_password('admin123'))
         r = self.client.post('/api/auth/login/', {'email': 'admin@admin.com', 'password': 'admin123'}, format='json')
-        self.assertEqual(r.data['redirect'], '/admin/')
+        self.assertEqual(r.data['redirect'], '/django-admin/')
 
     def test_ensure_admin_refuses_default_password_in_production(self):
         with self.assertRaises(CommandError):

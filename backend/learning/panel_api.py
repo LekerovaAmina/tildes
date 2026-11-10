@@ -1,4 +1,4 @@
-"""API админ-панели сайта (/panel на фронтенде, макет Figma «Tildes — админ-панель»).
+"""API админ-панели сайта (/admin на фронтенде, макет Figma «Tildes — админ-панель»).
 
 Все запросы — только для сотрудников (роль admin или editor, users.is_staff) с заголовком
 Authorization: Token <key>. Изменения пишутся в audit_log так же, как в Django-админке.

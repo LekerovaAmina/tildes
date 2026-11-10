@@ -30,6 +30,6 @@ npm run dev      # → http://localhost:5173
 
 **База данных:** по умолчанию SQLite. Как подключить PostgreSQL, описано в `backend/README.md`, раздел «База данных».
 
-**Админ-панель:** войдите на сайте как **admin@admin.com / admin123**, и откроется http://localhost:5173/panel. Это учётка только для разработки: на сервере с `DJANGO_DEBUG=0` пароль `admin123` не сработает.
+**Админ-панель:** войдите на сайте как **admin@admin.com / admin123**, и откроется http://localhost:5173/admin. Это учётка только для разработки: на сервере с `DJANGO_DEBUG=0` пароль `admin123` не сработает.
 
 Подробности — в `backend/README.md` и `frontend/README.md`.

@@ -37,8 +37,9 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
         <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
-        {/* Админ-панель (макет Figma «Tildes — админ-панель») — только admin / editor */}
-        <Route path="/panel" element={<PanelLayout />}>
+        {/* Админ-панель (макет Figma «Tildes — админ-панель») — только admin / editor.
+            Стандартная Django-админка — /django-admin/ */}
+        <Route path="/admin" element={<PanelLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="levels" element={<Levels />} />
           <Route path="levels/:code" element={<Levels />} />
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="speaking" element={<Placeholder section="speaking" />} />
           <Route path="writing" element={<Placeholder section="writing" />} />
         </Route>
+        <Route path="/panel/*" element={<Navigate to="/admin" replace />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Landing />} />
           <Route path="/soon/:level" element={<Soon />} />

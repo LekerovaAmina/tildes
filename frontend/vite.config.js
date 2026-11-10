@@ -7,10 +7,11 @@ export default defineConfig({
     host: true,
     port: 5173,
     // Запросы /api/* уходят на Django (backend, порт 8000)
-    // /admin и /static — админка Django на том же адресе, чтобы после входа сессия сразу работала
+    // /django-admin и /static — Django-админка на том же адресе, чтобы после входа сессия сразу работала.
+    // /admin — это админ-панель самого сайта (React), её Vite отдаёт сам
     proxy: {
       '/api': 'http://127.0.0.1:8000',
-      '/admin': 'http://127.0.0.1:8000',
+      '/django-admin': 'http://127.0.0.1:8000',
       '/static': 'http://127.0.0.1:8000',
       // Загруженные картинки карточек (MEDIA_URL Django)
       '/media': 'http://127.0.0.1:8000',

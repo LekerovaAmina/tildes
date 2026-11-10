@@ -2,7 +2,7 @@ from django.urls import path
 
 from . import auth, panel_api, views
 
-# API админ-панели (/panel на фронтенде) — только для admin / editor, см. learning/panel_api.py
+# API админ-панели (/admin на фронтенде) — только для admin / editor, см. learning/panel_api.py
 panel_urls = [
     path('panel/dashboard/', panel_api.dashboard),
     path('panel/search/', panel_api.search),

@@ -9,7 +9,7 @@ export default function Levels() {
   const { code: param } = useParams()
   const code = (param || 'B2').toUpperCase()
   const navigate = useNavigate()
-  useCrumbs([{ label: 'Контент' }, { label: 'Уровни и модули', to: '/panel/levels' }, { label: code }])
+  useCrumbs([{ label: 'Контент' }, { label: 'Уровни и модули', to: '/admin/levels' }, { label: code }])
 
   const levels = useLoad(() => panelApi.levels(), [])
   const page = useLoad(() => panelApi.modules(code), [code])
@@ -38,7 +38,7 @@ export default function Levels() {
 
   const newLesson = async (moduleId) => {
     const lesson = await panelApi.createLesson(moduleId, { title_kz: 'Жаңа сабақ' })
-    navigate(`/panel/lessons/${lesson.id}`)
+    navigate(`/admin/lessons/${lesson.id}`)
   }
 
   const togglePublished = async () => {
@@ -65,7 +65,7 @@ export default function Levels() {
 
       <div className="p-level-tabs">
         {(levels.data || []).map((lv) => (
-          <Link key={lv.code} to={`/panel/levels/${lv.code}`} className={`p-level-tab ${lv.code === code ? 'active' : ''}`}>
+          <Link key={lv.code} to={`/admin/levels/${lv.code}`} className={`p-level-tab ${lv.code === code ? 'active' : ''}`}>
             <b>{lv.code}</b> <span>{lv.code === code ? `${lv.module_count} модулей` : lv.module_count}</span>
           </Link>
         ))}
@@ -162,7 +162,7 @@ export default function Levels() {
                             {l.blocks.length ? l.blocks.map((b) => BLOCKS[b].kz).join(' · ') : 'Блоков пока нет'}
                           </span>
                           <Badge status={l.status} />
-                          <Link to={`/panel/lessons/${l.id}`} className="p-link">
+                          <Link to={`/admin/lessons/${l.id}`} className="p-link">
                             Открыть в конструкторе
                           </Link>
                         </div>
@@ -189,7 +189,7 @@ export default function Levels() {
             const lv = await panelApi.createLevel(d)
             setModal(null)
             levels.reload()
-            navigate(`/panel/levels/${lv.code}`)
+            navigate(`/admin/levels/${lv.code}`)
           }}
         />
       )}

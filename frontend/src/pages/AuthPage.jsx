@@ -25,7 +25,7 @@ export default function AuthPage() {
   // Сотрудник (admin / editor) — в админ-панель (или на ту её страницу, с которой отправили на вход)
   const after = (u) => {
     const from = location.state?.from
-    if (u.is_staff) return from?.startsWith('/panel') ? from : '/panel'
+    if (u.is_staff) return from?.startsWith('/admin') ? from : '/admin'
     return from || (u.level ? '/home' : '/')
   }
 
