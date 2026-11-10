@@ -6,4 +6,5 @@ python3 -m venv .venv
 pip install --no-index --find-links wheels -r requirements.txt
 python manage.py migrate
 python manage.py load_content
-echo "Готово! Запуск: ./run.sh   Администратор: .venv/bin/python manage.py createsuperuser"
+python manage.py ensure_admin  # admin@admin.com / admin123 — только для разработки
+echo "Готово! Запуск: ./run.sh   Админка: admin@admin.com / admin123"

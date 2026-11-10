@@ -1,6 +1,7 @@
 from django.core.management import call_command
 from django.db import connection
-from django.test import Client, TestCase
+from django.core.management.base import CommandError
+from django.test import Client, TestCase, override_settings
 from rest_framework.test import APIClient
 
 from .models import (
@@ -261,3 +262,19 @@ class AuthApiTests(TestCase):
         )
         self.assertEqual(r.status_code, 302)
         self.assertEqual(r.url, '/admin/')
+
+    @override_settings(DEBUG=True)
+    def test_ensure_admin_creates_default_admin(self):
+        call_command('ensure_admin', verbosity=0)
+        call_command('ensure_admin', verbosity=0)  # повторный запуск ничего не ломает
+        admin = User.objects.get(email='admin@admin.com')
+        self.assertTrue(admin.is_superuser and admin.is_staff)
+        self.assertTrue(admin.check_password('admin123'))
+        r = self.client.post('/api/auth/login/', {'email': 'admin@admin.com', 'password': 'admin123'}, format='json')
+        self.assertEqual(r.data['redirect'], '/admin/')
+
+    def test_ensure_admin_refuses_default_password_in_production(self):
+        with self.assertRaises(CommandError):
+            call_command('ensure_admin', verbosity=0)  # в тестах DEBUG=False, как в продакшене
+        self.assertFalse(User.objects.filter(email='admin@admin.com').exists())
+
