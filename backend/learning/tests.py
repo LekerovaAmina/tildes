@@ -278,3 +278,89 @@ class AuthApiTests(TestCase):
             call_command('ensure_admin', verbosity=0)  # в тестах DEBUG=False, как в продакшене
         self.assertFalse(User.objects.filter(email='admin@admin.com').exists())
 
+
+
+class PanelApiTests(TestCase):
+    """API админ-панели (learning/panel_api.py)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command('load_content', verbosity=0)
+        cls.admin = User.objects.create_superuser('boss@b.kz', 'Qazaq-Til-2026')
+        cls.student = User.objects.create_user('kid@b.kz', 'Qazaq-Til-2026')
+
+    def client_for(self, user):
+        from rest_framework.authtoken.models import Token
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=f'Token {Token.objects.get_or_create(user=user)[0].key}')
+        return c
+
+    def setUp(self):
+        self.api = self.client_for(self.admin)
+        self.module = Module.objects.get(level__code='B2', number=1)
+
+    def test_only_staff(self):
+        self.assertEqual(APIClient().get('/api/panel/dashboard/').status_code, 401)
+        self.assertEqual(self.client_for(self.student).get('/api/panel/dashboard/').status_code, 403)
+        editor = User.objects.create_user('ed@b.kz', 'Qazaq-Til-2026', role=User.Role.EDITOR)
+        self.assertEqual(self.client_for(editor).get('/api/panel/dashboard/').status_code, 200)
+
+    def test_dashboard_and_levels(self):
+        d = self.api.get('/api/panel/dashboard/').json()
+        self.assertEqual(d['stats'], {'modules': 10, 'lessons': 40, 'words': 225, 'questions': 50})
+        self.assertEqual(len(d['coverage']), 5)
+        r = self.api.get('/api/panel/levels/b2/modules/').json()
+        self.assertEqual(len(r['modules']), 10)
+        self.assertEqual(r['modules'][0]['lessons'][0]['letter'], 'А')
+        self.assertEqual(r['modules'][0]['lessons'][0]['blocks'], ['cards', 'grammar', 'text', 'quiz'])
+
+    def test_lesson_from_draft_to_published(self):
+        lesson = self.api.post(f'/api/panel/modules/{self.module.id}/lessons/', {'title_kz': 'Жаңа сабақ'}, format='json').json()
+        lid = lesson['id']
+        self.assertEqual(lesson['status'], 'draft')
+        self.assertEqual(lesson['letter'], 'Г')  # пятый урок модуля
+
+        # пустой урок публиковать нельзя
+        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/publish/').status_code, 400)
+
+        self.api.patch(f'/api/panel/lessons/{lid}/', {'title_ru': 'Новый урок'}, format='json')
+        csv_rows = '\n'.join(f'сөз{i};слово {i};зат есім' for i in range(9))
+        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/words/import/', {'csv': csv_rows}, format='json').json()['count'], 9)
+        w = self.api.post(f'/api/panel/lessons/{lid}/words/', {'kz': 'көңіл', 'ru': 'душа'}, format='json')
+        self.assertEqual(w.status_code, 201)
+        self.api.put(f'/api/panel/lessons/{lid}/grammar/', {
+            'title_kz': 'Ереже', 'title_ru': 'Правило', 'explanation': 'Түсініктеме',
+            'table': [{'form': 'А', 'pattern': 'Б', 'example': 'В'}], 'examples': [{'kz': 'Мысал', 'ru': 'Пример'}],
+        }, format='json')
+        r = self.api.put(f'/api/panel/lessons/{lid}/text-quiz/', {
+            'text': {'title': 'Мәтін', 'paragraphs': ['Бірінші абзац.', 'Екінші абзац.']},
+            'questions': [{'prompt': 'Сұрақ?', 'options': ['Иә', 'Жоқ'], 'correct': 1}],
+        }, format='json').json()
+        self.assertEqual(r['questions'][0]['correct'], 1)
+
+        detail = self.api.get(f'/api/panel/lessons/{lid}/').json()
+        self.assertTrue(detail['readiness']['ok'], detail['readiness'])
+        self.assertEqual([b['type'] for b in detail['blocks']], ['cards', 'grammar', 'text', 'quiz'])
+
+        # пока урок черновик, ученики его слов не видят
+        student_words = lambda: len(APIClient().get(f'/api/modules/{self.module.id}/').json()['words'])  # noqa: E731
+        before = student_words()
+        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/publish/').status_code, 200)
+        self.assertEqual(student_words(), before + 10)
+        self.assertTrue(AuditLog.objects.filter(action='publish', entity_type='lessons', entity_id=lid).exists())
+
+    def test_words_bulk_and_blocks(self):
+        lid = self.api.post(f'/api/panel/modules/{self.module.id}/lessons/', {}, format='json').json()['id']
+        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/blocks/', {'type': 'text'}, format='json').status_code, 201)
+        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/blocks/', {'type': 'text'}, format='json').status_code, 400)
+        ids = [self.api.post(f'/api/panel/lessons/{lid}/words/', {'kz': f'a{i}', 'ru': f'b{i}'}, format='json').json()['id']
+               for i in range(3)]
+        self.api.post(f'/api/panel/lessons/{lid}/words/bulk/', {'ids': ids[:2], 'action': 'delete'}, format='json')
+        self.assertEqual(len(self.api.get(f'/api/panel/lessons/{lid}/words/').json()['words']), 1)
+        r = self.api.delete(f'/api/panel/lessons/{lid}/blocks/cards/').json()
+        self.assertEqual([b['type'] for b in r['blocks']], ['text'])
+        self.assertEqual(Word.objects.filter(lesson_id=lid).count(), 0)
+
+    def test_search(self):
+        r = self.api.get('/api/panel/search/', {'q': 'көңіл'}).json()
+        self.assertTrue(r['lessons'] and r['words'])

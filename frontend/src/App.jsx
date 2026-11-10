@@ -11,6 +11,14 @@ import TopicDetail from './pages/TopicDetail.jsx'
 import Rating from './pages/Rating.jsx'
 import RequireAuth from './components/RequireAuth.jsx'
 import AuthPage from './pages/AuthPage.jsx'
+import PanelLayout from './panel/PanelLayout.jsx'
+import Dashboard from './panel/pages/Dashboard.jsx'
+import Levels from './panel/pages/Levels.jsx'
+import LessonBuilder from './panel/pages/LessonBuilder.jsx'
+import CardsEditor from './panel/pages/CardsEditor.jsx'
+import GrammarEditor from './panel/pages/GrammarEditor.jsx'
+import TextQuizEditor from './panel/pages/TextQuizEditor.jsx'
+import Placeholder from './panel/pages/Placeholder.jsx'
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
@@ -29,6 +37,19 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
         <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
+        {/* Админ-панель (макет Figma «Tildes — админ-панель») — только admin / editor */}
+        <Route path="/panel" element={<PanelLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="levels" element={<Levels />} />
+          <Route path="levels/:code" element={<Levels />} />
+          <Route path="lessons/:id" element={<LessonBuilder />} />
+          <Route path="lessons/:id/cards" element={<CardsEditor />} />
+          <Route path="lessons/:id/grammar" element={<GrammarEditor />} />
+          <Route path="lessons/:id/text" element={<TextQuizEditor />} />
+          <Route path="listening" element={<Placeholder section="listening" />} />
+          <Route path="speaking" element={<Placeholder section="speaking" />} />
+          <Route path="writing" element={<Placeholder section="writing" />} />
+        </Route>
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Landing />} />
           <Route path="/soon/:level" element={<Soon />} />

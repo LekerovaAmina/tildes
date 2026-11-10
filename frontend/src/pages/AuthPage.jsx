@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { errorText, serverUrl } from '../api/client.js'
+import { errorText } from '../api/client.js'
 import { Logo } from '../components/Layout.jsx'
 import Icon from '../components/Icon.jsx'
 import { useAuth } from '../store/auth.jsx'
@@ -22,7 +22,12 @@ export default function AuthPage() {
   useEffect(() => setError(''), [isRegister])
 
   // Куда вести после входа: на страницу, с которой отправили на вход, иначе — к выбору уровня или на главную
-  const after = (u) => location.state?.from || (u.level ? '/home' : '/')
+  // Сотрудник (admin / editor) — в админ-панель (или на ту её страницу, с которой отправили на вход)
+  const after = (u) => {
+    const from = location.state?.from
+    if (u.is_staff) return from?.startsWith('/panel') ? from : '/panel'
+    return from || (u.level ? '/home' : '/')
+  }
 
   if (status === 'user') return <Navigate to={after(user)} replace />
 
@@ -36,11 +41,7 @@ export default function AuthPage() {
       const res = isRegister
         ? await register(form.email.trim(), form.password, form.name.trim())
         : await login(form.email.trim(), form.password)
-      // Администратор / редактор — сразу в админку Django (сессию бэкенд уже открыл)
-      if (res.redirect) {
-        window.location.href = serverUrl(res.redirect)
-        return
-      }
+      // Сессию Django-админки для сотрудника бэкенд тоже открыл — ссылка на неё есть в меню панели
       navigate(after(res.user), { replace: true })
     } catch (err) {
       setError(errorText(err))

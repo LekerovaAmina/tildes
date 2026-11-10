@@ -1,5 +1,4 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { serverUrl } from '../api/client.js'
 import { useAuth } from '../store/auth.jsx'
 import { useProgress } from '../store/progress.jsx'
 import Icon from './Icon.jsx'
@@ -48,9 +47,9 @@ export default function Layout() {
               <Icon name="star" size={14} /> {points}
             </Link>
             {user.is_staff && (
-              <a href={serverUrl('/admin/')} className="chip chip-admin" title="Админ-панель Django">
+              <Link to="/panel" className="chip chip-admin" title="Админ-панель">
                 Админка
-              </a>
+              </Link>
             )}
             <button className="icon-btn logout-btn" onClick={onLogout} title={`Выйти (${user.email})`} aria-label="Выйти">
               <Icon name="logout" size={18} />

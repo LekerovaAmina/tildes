@@ -101,6 +101,33 @@ backend/
 
 Сотрудники входят в админку по email и паролю (`python manage.py createsuperuser`). Роль `editor` может менять только контент.
 
+## API админ-панели
+
+Для экрана `/panel` на фронтенде (макет Figma «Tildes — админ-панель»), код в `learning/panel_api.py`. Доступ только у admin и editor, с заголовком `Authorization: Token …`. Все изменения пишутся в `audit_log`.
+
+| Метод | Путь | Что делает |
+|---|---|---|
+| GET | `/api/panel/dashboard/` | счётчики, покрытие уровней, черновики, активность учеников, последние изменения |
+| GET | `/api/panel/search/?q=` | поиск по урокам и словам |
+| GET / POST | `/api/panel/levels/` | уровни; создать уровень |
+| PATCH | `/api/panel/levels/<code>/` | названия, описание, «виден ученикам» |
+| GET / POST | `/api/panel/levels/<code>/modules/` | модули с уроками; создать модуль |
+| POST | `/api/panel/levels/<code>/modules/reorder/` | `{ids}` — порядок модулей |
+| PATCH | `/api/panel/modules/<id>/` | названия, эмодзи, цвет, статус |
+| POST | `/api/panel/modules/<id>/lessons/` | новый урок (черновик) |
+| GET / PATCH / DELETE | `/api/panel/lessons/<id>/` | конструктор урока: настройки, блоки, готовность к публикации |
+| POST | `/api/panel/lessons/<id>/publish/` | опубликовать (только если все пункты готовности выполнены) |
+| POST / DELETE | `/api/panel/lessons/<id>/blocks/…` | добавить или удалить блок `cards`, `grammar`, `text`, `quiz`; `reorder/` — порядок |
+| GET / POST | `/api/panel/lessons/<id>/words/` | карточки урока; новая карточка |
+| PATCH / DELETE | `/api/panel/words/<id>/` | изменить или удалить карточку |
+| POST | `/api/panel/lessons/<id>/words/bulk/` | `{ids, action: publish \| delete}` |
+| POST | `/api/panel/lessons/<id>/words/import/` | `{csv}` — строки `kz;ru;part_of_speech;example_kz;example_ru` |
+| GET / PUT | `/api/panel/lessons/<id>/grammar/` | правило, таблица форм, примеры |
+| GET / PUT | `/api/panel/lessons/<id>/text-quiz/` | текст для чтения и вопросы теста |
+| POST | `/api/panel/media/` | загрузка картинки для карточки (multipart, поле `file`) |
+
+Готовность урока к публикации: название по-русски, не меньше 10 карточек, у грамматики есть объяснение и пример, есть текст, у каждого вопроса теста отмечен правильный ответ.
+
 ## API
 
 | Метод | Путь | Описание |

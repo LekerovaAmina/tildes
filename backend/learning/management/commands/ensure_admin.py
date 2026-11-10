@@ -37,7 +37,7 @@ class Command(BaseCommand):
         user = User.objects.filter(email=email).first()
         if user is None:
             User.objects.create_superuser(email, password, display_name='Администратор')
-            self.stdout.write(self.style.SUCCESS(f'Создан администратор {email}'))
+            self.log(opts, self.style.SUCCESS(f'Создан администратор {email}'))
             return
 
         changed = []
@@ -49,6 +49,10 @@ class Command(BaseCommand):
             changed.append('пароль')
         if changed:
             user.save()
-            self.stdout.write(self.style.SUCCESS(f'Администратор {email}: обновлены {", ".join(changed)}'))
+            self.log(opts, self.style.SUCCESS(f'Администратор {email}: обновлены {", ".join(changed)}'))
         else:
-            self.stdout.write(f'Администратор {email} уже есть')
+            self.log(opts, f'Администратор {email} уже есть')
+
+    def log(self, opts, message):
+        if opts['verbosity'] > 0:
+            self.stdout.write(message)
