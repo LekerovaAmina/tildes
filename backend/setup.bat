@@ -1,9 +1,15 @@
 @echo off
 chcp 65001 >nul
-REM Установка бэкенда на Windows (без интернета — пакеты лежат в папке wheels)
+REM Установка бэкенда на Windows. Пакеты берутся из папки wheels, недостающие — из интернета (PyPI)
+REM База — PostgreSQL: сначала заполните .env (см. .env.example и README.md)
+if not exist .env (
+  copy .env.example .env >nul
+  echo Создан файл .env — впишите в него пароль PostgreSQL ^(POSTGRES_PASSWORD^) и запустите setup.bat снова.
+  exit /b 1
+)
 python -m venv .venv || goto :error
 call .venv\Scripts\activate.bat
-python -m pip install --no-index --find-links wheels -r requirements.txt || goto :error
+python -m pip install --find-links wheels -r requirements.txt || goto :error
 python manage.py migrate || goto :error
 python manage.py load_content || goto :error
 REM Админ для разработки: admin@admin.com / admin123 (см. learning/management/commands/ensure_admin.py)

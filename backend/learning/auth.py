@@ -18,8 +18,9 @@ from django.db import transaction
 from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -79,6 +80,60 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
 
 
+# --- Схемы ответов (используются только в документации OpenAPI / Swagger) ---
+
+class UserSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+    name = serializers.CharField(allow_blank=True)
+    role = serializers.ChoiceField(choices=['student', 'editor', 'admin'])
+    points = serializers.IntegerField()
+    level = serializers.CharField(allow_null=True, help_text='Код текущего уровня, например b2')
+    is_staff = serializers.BooleanField(help_text='Сотрудник (admin / editor) — фронтенд ведёт его в админку')
+    date_joined = serializers.DateTimeField()
+
+
+class TokenResponseSerializer(serializers.Serializer):
+    token = serializers.CharField(help_text='Передавайте в заголовке Authorization: Token <token>')
+    user = UserSerializer()
+
+
+class LoginResponseSerializer(TokenResponseSerializer):
+    redirect = serializers.CharField(required=False, help_text='Только для сотрудников: /django-admin/')
+
+
+class MeResponseSerializer(serializers.Serializer):
+    user = UserSerializer()
+
+
+class OkSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()
+
+
+class DetailSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
+VALIDATION_ERROR = OpenApiResponse(
+    OpenApiTypes.OBJECT,
+    description='Ошибка в полях: {"<поле>": ["сообщение", ...]}',
+    examples=[OpenApiExample('Короткий пароль', value={'password': ['Введённый пароль слишком короткий.']})],
+)
+THROTTLED = OpenApiResponse(DetailSerializer, description='Слишком много попыток с этого IP (AUTH_THROTTLE_RATE)')
+NOT_AUTHENTICATED = OpenApiResponse(DetailSerializer, description='Нет заголовка Authorization или токен недействителен')
+
+
+@extend_schema(
+    tags=['auth'],
+    summary='Регистрация',
+    description='Создаёт пользователя и возвращает токен. Если передан X-Device-Id, анонимный '
+                'пользователь устройства становится аккаунтом — баллы и прогресс сохраняются.',
+    auth=[],
+    parameters=[OpenApiParameter('X-Device-Id', str, OpenApiParameter.HEADER, required=False,
+                                 description='Идентификатор устройства анонимного пользователя')],
+    request=RegisterSerializer,
+    responses={201: TokenResponseSerializer, 400: VALIDATION_ERROR, 429: THROTTLED},
+)
 @api_view(['POST'])
 @authentication_classes([])
 @throttle_classes([AuthThrottle])
@@ -105,6 +160,19 @@ def register(request):
     return token_response(user, status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=['auth'],
+    summary='Вход по email и паролю',
+    auth=[],
+    request=LoginSerializer,
+    responses={
+        200: LoginResponseSerializer,
+        400: VALIDATION_ERROR,
+        401: OpenApiResponse(DetailSerializer, description='Неверный email или пароль',
+                             examples=[OpenApiExample('Неверный пароль', value={'detail': 'Неверный email или пароль.'})]),
+        429: THROTTLED,
+    },
+)
 @api_view(['POST'])
 @authentication_classes([])
 @throttle_classes([AuthThrottle])
@@ -113,7 +181,10 @@ def login(request):
     s.is_valid(raise_exception=True)
     user = authenticate(request, email=s.validated_data['email'].strip().lower(), password=s.validated_data['password'])
     if user is None:
-        raise AuthenticationFailed('Неверный email или пароль.')
+        # Явно 401: при authentication_classes([]) DRF превращает AuthenticationFailed в 403,
+        # потому что ему нечего поставить в обязательный для 401 заголовок WWW-Authenticate.
+        return Response({'detail': 'Неверный email или пароль.'},
+                        status=status.HTTP_401_UNAUTHORIZED, headers={'WWW-Authenticate': 'Token'})
     update_last_login(None, user)
     response = token_response(user)
     if user.is_staff:
@@ -123,6 +194,13 @@ def login(request):
     return response
 
 
+@extend_schema(
+    tags=['auth'],
+    summary='Выход',
+    description='Удаляет токен пользователя (и сессию Django-админки, если была).',
+    request=None,
+    responses={200: OkSerializer, 401: NOT_AUTHENTICATED},
+)
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -132,6 +210,11 @@ def logout(request):
     return Response({'ok': True})
 
 
+@extend_schema(
+    tags=['auth'],
+    summary='Текущий пользователь',
+    responses={200: MeResponseSerializer, 401: NOT_AUTHENTICATED},
+)
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])

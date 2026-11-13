@@ -64,8 +64,10 @@ async function request(path, { method = 'GET', body } = {}) {
     const err = new Error(`API ${method} ${path}: ${res.status}`)
     err.status = res.status
     err.data = await res.json().catch(() => null)
-    // Токен устарел или удалён — сайт просит войти заново (store/auth.jsx)
-    if (token && (res.status === 401 || res.status === 403)) {
+    // 401 — токен устарел или удалён, сайт просит войти заново (store/auth.jsx).
+    // 403 — «нет прав» (например, ученик в админ-панели), из аккаунта не выкидываем.
+    // На /auth/login/ 401 значит «неверный email или пароль» — это ошибка формы, а не выход.
+    if (token && res.status === 401 && !path.startsWith('/auth/login/')) {
       setToken(null)
       window.dispatchEvent(new Event('tildes:logout'))
     }

@@ -64,6 +64,9 @@ export default function LessonBuilder() {
       if (okText) showFlash(okText)
       return res
     } catch (e) {
+      // Отказ в публикации: сервер присылает актуальную «Готовность» (ok — булевы true/false)
+      const readiness = e.data?.readiness
+      if (readiness && typeof readiness.ok === 'boolean') setData((l) => ({ ...l, readiness }))
       showFlash(errorText(e), 'error')
     } finally {
       setBusy(false)
