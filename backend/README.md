@@ -1,11 +1,11 @@
 # Tildes — бэкенд (Python + Django)
 
-Django 5.1 + Django REST Framework + django-cors-headers. База — PostgreSQL 16 (продакшен) или SQLite (разработка, по умолчанию).
-Все пакеты уже скачаны в папку `wheels/` — установка работает **без интернета**.
+Django 5.1 + Django REST Framework + django-cors-headers + drf-spectacular. База — **только PostgreSQL** (16+).
+Пакеты лежат в папке `wheels/`; под Windows и Python 3.13 установка работает **без интернета**, в остальных случаях недостающие пакеты скачиваются из PyPI.
 
 ## Установка
 
-Нужен Python 3.10+ (`python --version`).
+Нужен Python 3.10+ (`python --version`) и запущенный PostgreSQL. Сначала создайте базу и `.env` — см. раздел [PostgreSQL](#база-данных) ниже.
 
 **Windows:** дважды щёлкните `setup.bat` (или запустите в терминале), затем `run.bat`.
 
@@ -23,13 +23,15 @@ sh run.sh
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
-pip install --no-index --find-links wheels -r requirements.txt
+pip install --find-links wheels -r requirements.txt
 python manage.py migrate
 python manage.py load_content
 python manage.py runserver 8000
 ```
 
 - API: http://127.0.0.1:8000/api/levels/
+- Документация API (Swagger UI): http://127.0.0.1:8000/api/docs/ — схема OpenAPI: http://127.0.0.1:8000/api/schema/
+  (сохранить в файл: `python manage.py spectacular --file schema.yaml`)
 - Админка (редактирование слов, тем, вопросов): http://127.0.0.1:8000/django-admin/ — сначала `python manage.py createsuperuser`
 - Тесты: `python manage.py test learning`
 
@@ -72,17 +74,14 @@ backend/
 **PostgreSQL:**
 
 1. В pgAdmin создайте пользователя (Login/Group Role) `tildes` с паролем и правом входа (Can login), затем базу `tildes` с владельцем `tildes`.
+   Для запуска тестов (`python manage.py test`) пользователю нужно право создавать базы: `ALTER ROLE tildes CREATEDB;`
 2. Скопируйте `.env.example` в `.env` (рядом с `manage.py`) и впишите пароль в `POSTGRES_PASSWORD`. Файл `.env` в git не попадает.
-3. Поставьте драйвер — под Windows он уже лежит в `wheels/`:
-   ```bash
-   .venv\Scripts\python -m pip install --find-links wheels -r requirements-postgres.txt
-   ```
+   Там же `DJANGO_ALLOWED_HOSTS` — домены, с которых Django принимает запросы (через запятую).
+3. Драйвер `psycopg` входит в `requirements.txt` (под Windows лежит в `wheels/`).
 4. Создайте таблицы и загрузите контент: `python manage.py migrate`, затем `python manage.py load_content`.
 5. Создайте администратора: `python manage.py createsuperuser` (email и пароль).
 
-Без `POSTGRES_DB` в `.env` используется SQLite.
-
-**Обновление со старой версии:** схема создана заново, старый `db.sqlite3` несовместим — удалите его и снова запустите `setup`.
+SQLite больше не поддерживается: старый `db.sqlite3` можно удалить.
 
 ## Пользователь и вход
 
@@ -93,7 +92,7 @@ backend/
 | Метод | Путь | Описание |
 |---|---|---|
 | POST | `/api/auth/register/` | `{email, password, name?}` → `{token, user}` (201) |
-| POST | `/api/auth/login/` | `{email, password}` → `{token, user}` |
+| POST | `/api/auth/login/` | `{email, password}` → `{token, user}`; неверный email или пароль → 401 `{detail}` |
 | POST | `/api/auth/logout/` | удаляет токен (нужен `Authorization`) |
 | GET | `/api/auth/me/` | `{user}` (нужен `Authorization`) |
 
@@ -116,7 +115,7 @@ backend/
 | PATCH | `/api/panel/modules/<id>/` | названия, эмодзи, цвет, статус |
 | POST | `/api/panel/modules/<id>/lessons/` | новый урок (черновик) |
 | GET / PATCH / DELETE | `/api/panel/lessons/<id>/` | конструктор урока: настройки, блоки, готовность к публикации |
-| POST | `/api/panel/lessons/<id>/publish/` | опубликовать (только если все пункты готовности выполнены) |
+| POST | `/api/panel/lessons/<id>/publish/` | опубликовать (только если все пункты готовности выполнены; иначе 400 `{detail, readiness}`, `ok` — `true`/`false`) |
 | POST / DELETE | `/api/panel/lessons/<id>/blocks/…` | добавить или удалить блок `cards`, `grammar`, `text`, `quiz`; `reorder/` — порядок |
 | GET / POST | `/api/panel/lessons/<id>/words/` | карточки урока; новая карточка |
 | PATCH / DELETE | `/api/panel/words/<id>/` | изменить или удалить карточку |

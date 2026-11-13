@@ -1,5 +1,0 @@
-# Для работы с PostgreSQL. Под Windows (Python 3.10–3.13) пакеты уже лежат в wheels/:
-#   pip install --find-links wheels -r requirements-postgres.txt
-# Затем заполните backend/.env по образцу .env.example (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD …).
--r requirements.txt
-psycopg[binary]>=3.1,<4

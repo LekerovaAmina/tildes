@@ -201,7 +201,9 @@ class AuthApiTests(TestCase):
         self.assertTrue(user.check_password('Qazaq-Til-2026'))
 
         r = self.client.post('/api/auth/login/', {'email': 'aru@example.kz', 'password': 'wrong-pass-1'}, format='json')
-        self.assertIn(r.status_code, (401, 403))
+        self.assertEqual(r.status_code, 401, r.content)  # не 403
+        self.assertEqual(r.data['detail'], 'Неверный email или пароль.')
+        self.assertEqual(r['WWW-Authenticate'], 'Token')
 
         r = self.client.post('/api/auth/login/', {'email': 'ARU@example.kz', 'password': 'Qazaq-Til-2026'}, format='json')
         self.assertEqual(r.status_code, 200)
@@ -215,7 +217,7 @@ class AuthApiTests(TestCase):
         self.assertEqual(self.client.get('/api/progress/').status_code, 200)
 
         self.assertEqual(self.client.post('/api/auth/logout/').status_code, 200)
-        self.assertIn(self.client.get('/api/auth/me/').status_code, (401, 403))
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
 
     def test_register_validation(self):
         self.client.post('/api/auth/register/', {'email': 'a@b.kz', 'password': 'Qazaq-Til-2026'}, format='json')
@@ -320,8 +322,13 @@ class PanelApiTests(TestCase):
         self.assertEqual(lesson['status'], 'draft')
         self.assertEqual(lesson['letter'], 'Г')  # пятый урок модуля
 
-        # пустой урок публиковать нельзя
-        self.assertEqual(self.api.post(f'/api/panel/lessons/{lid}/publish/').status_code, 400)
+        # пустой урок публиковать нельзя; ok в readiness — булевы, а не строки "True"/"False"
+        r = self.api.post(f'/api/panel/lessons/{lid}/publish/')
+        self.assertEqual(r.status_code, 400)
+        body = r.json()
+        self.assertEqual(body['detail'], 'Урок не готов к публикации')
+        self.assertIs(body['readiness']['ok'], False)
+        self.assertTrue(all(isinstance(i['ok'], bool) for i in body['readiness']['items']), body['readiness'])
 
         self.api.patch(f'/api/panel/lessons/{lid}/', {'title_ru': 'Новый урок'}, format='json')
         csv_rows = '\n'.join(f'сөз{i};слово {i};зат есім' for i in range(9))
@@ -364,3 +371,24 @@ class PanelApiTests(TestCase):
     def test_search(self):
         r = self.api.get('/api/panel/search/', {'q': 'көңіл'}).json()
         self.assertTrue(r['lessons'] and r['words'])
+
+    def test_search_case_insensitive_cyrillic(self):
+        # PostgreSQL (ILIKE) сам ищет без учёта регистра кириллицы — отдельная ветка для SQLite больше не нужна
+        r = self.api.get('/api/panel/search/', {'q': 'КӨҢІЛ'}).json()
+        self.assertTrue(r['lessons'] and r['words'])
+
+
+class OpenApiTests(TestCase):
+    def test_schema_and_swagger(self):
+        r = self.client.get('/api/schema/', {'format': 'json'})
+        self.assertEqual(r.status_code, 200)
+        schema = r.json()
+        login = schema['paths']['/api/auth/login/']['post']
+        self.assertEqual(login['tags'], ['auth'])
+        self.assertIn('401', login['responses'])
+        self.assertNotIn('403', login['responses'])
+        publish = schema['paths']['/api/panel/lessons/{id}/publish/']['post']  # drf-spectacular называет pk → id
+        readiness = schema['components']['schemas']['Readiness']['properties']
+        self.assertEqual(readiness['ok']['type'], 'boolean')
+        self.assertIn('400', publish['responses'])
+        self.assertEqual(self.client.get('/api/docs/').status_code, 200)

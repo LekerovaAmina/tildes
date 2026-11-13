@@ -11,11 +11,12 @@ import csv
 import io
 from datetime import timedelta
 
-from django.db import connection, transaction
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from rest_framework import serializers, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, parser_classes, permission_classes
 from rest_framework.exceptions import ValidationError
@@ -314,14 +315,9 @@ def search(request):
         return Response({'lessons': [], 'words': []})
     lessons = Lesson.objects.select_related('module__level')
     words = Word.objects.select_related('lesson__module__level')
-    if connection.vendor == 'sqlite':
-        # SQLite не умеет без учёта регистра для кириллицы — фильтруем в Python (данных немного)
-        needle = q.casefold()
-        lessons = [l for l in lessons if needle in f'{l.title_kz} {l.title_ru}'.casefold()][:8]
-        words = [w for w in words if needle in f'{w.kz} {w.ru}'.casefold()][:8]
-    else:
-        lessons = lessons.filter(Q(title_kz__icontains=q) | Q(title_ru__icontains=q))[:8]
-        words = words.filter(Q(kz__icontains=q) | Q(ru__icontains=q))[:8]
+    # PostgreSQL: icontains → ILIKE, регистр кириллицы учитывается корректно
+    lessons = lessons.filter(Q(title_kz__icontains=q) | Q(title_ru__icontains=q))[:8]
+    words = words.filter(Q(kz__icontains=q) | Q(ru__icontains=q))[:8]
     return Response({
         'lessons': [{'id': l.id, 'title': l.title_kz, 'where': where(l)} for l in lessons],
         'words': [{'id': w.id, 'lesson_id': w.lesson_id, 'kz': w.kz, 'ru': w.ru, 'where': where(w.lesson)} for w in words],
@@ -485,13 +481,55 @@ def lesson(request, pk):
     return Response(lesson_detail(lesson))
 
 
+# --- Схемы для документации OpenAPI (Swagger) ---
+
+class ReadinessItemSerializer(serializers.Serializer):
+    key = serializers.ChoiceField(choices=['title_ru', 'cards', 'grammar', 'text', 'quiz'])
+    ok = serializers.BooleanField()
+    label = serializers.CharField()
+
+
+class ReadinessSerializer(serializers.Serializer):
+    items = ReadinessItemSerializer(many=True)
+    ok = serializers.BooleanField(help_text='true — все пункты выполнены, урок можно публиковать')
+
+
+class PublishRefusedSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    readiness = ReadinessSerializer()
+
+
+@extend_schema(
+    tags=['panel'],
+    summary='Опубликовать урок',
+    description='Публикует урок и его содержимое. Если не все пункты «Готовности к публикации» '
+                'выполнены — 400 со списком пунктов (ok — булевы значения).',
+    request=None,
+    responses={
+        200: OpenApiResponse(description='Урок опубликован — подробности урока, как в GET /api/panel/lessons/{id}/'),
+        400: OpenApiResponse(PublishRefusedSerializer, description='Урок не готов к публикации', examples=[
+            OpenApiExample('Не готов', value={
+                'detail': 'Урок не готов к публикации',
+                'readiness': {'ok': False, 'items': [
+                    {'key': 'title_ru', 'ok': True, 'label': 'Название по-русски'},
+                    {'key': 'cards', 'ok': False, 'label': 'Карточки: минимум 10 (сейчас 3)'},
+                ]},
+            }),
+        ]),
+        401: OpenApiResponse(description='Нет токена или токен недействителен'),
+        403: OpenApiResponse(description='Пользователь не admin / editor'),
+        404: OpenApiResponse(description='Урок не найден'),
+    },
+)
 @panel(['POST'])
 @transaction.atomic
 def lesson_publish(request, pk):
     lesson = get_object_or_404(Lesson.objects.select_related('module__level'), pk=pk)
     ready = readiness(lesson)
     if not ready['ok']:
-        raise ValidationError({'detail': 'Урок не готов к публикации', 'readiness': ready})
+        # Не ValidationError: DRF приводит все значения в нём к строкам, и ok приходили бы как "True"/"False"
+        return Response({'detail': 'Урок не готов к публикации', 'readiness': ready},
+                        status=status.HTTP_400_BAD_REQUEST)
     set_status(lesson, PUBLISHED)
     lesson.updated_by = request.user
     lesson.save()
