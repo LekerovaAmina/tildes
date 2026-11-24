@@ -1,33 +1,26 @@
 # Tildes — бэкенд (Python + Django)
 
 Django 5.1 + Django REST Framework + django-cors-headers + drf-spectacular. База — **только PostgreSQL** (16+).
-Пакеты лежат в папке `wheels/`; под Windows и Python 3.13 установка работает **без интернета**, в остальных случаях недостающие пакеты скачиваются из PyPI.
 
 ## Установка
 
-Нужен Python 3.10+ (`python --version`) и запущенный PostgreSQL. Сначала создайте базу и `.env` — см. раздел [PostgreSQL](#база-данных) ниже.
+**Через Docker (рекомендуется)** — из корня репозитория: `docker compose --env-file .env -f infra/docker-compose.yml up --build`.
+Контейнер `core` сам выполняет `migrate`, `load_content` и `ensure_admin`. Подробнее — корневой `README.md` и `DOCKER_GUIDE.md`.
+Команды Django в Docker: `docker compose -f infra/docker-compose.yml exec core python manage.py <команда>`.
 
-**Windows:** дважды щёлкните `setup.bat` (или запустите в терминале), затем `run.bat`.
-
-**macOS / Linux:**
-
-```bash
-sh setup.sh
-sh run.sh
-```
-
-Скрипт создаёт виртуальное окружение `.venv`, ставит пакеты из `wheels/`, создаёт базу и загружает контент B2.
-
-Вручную то же самое:
+**Без Docker (запасной вариант).** Нужен Python 3.10+ (`python --version`) и запущенный PostgreSQL. Сначала создайте базу и `.env` — см. раздел [PostgreSQL](#база-данных) ниже.
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
-pip install --find-links wheels -r requirements.txt
+pip install -r requirements.txt
 python manage.py migrate
 python manage.py load_content
+python manage.py ensure_admin     # admin@admin.com / admin123, только для разработки
 python manage.py runserver 8000
 ```
+
+На macOS/Linux то же самое делают `sh setup.sh` (один раз) и `sh run.sh`.
 
 - API: http://127.0.0.1:8000/api/levels/
 - Документация API (Swagger UI): http://127.0.0.1:8000/api/docs/ — схема OpenAPI: http://127.0.0.1:8000/api/schema/
@@ -49,9 +42,9 @@ backend/
 │   ├── data/content.json                    контент B2 (10 модулей, 225 слов, 50 вопросов)
 │   └── management/commands/load_content.py  загрузка/обновление контента
 ├── db/schema.sql      справочный DDL для PostgreSQL 16
-├── wheels/            скачанные пакеты (Django, DRF, CORS и зависимости)
 ├── requirements.txt
-└── setup.bat / setup.sh / run.bat / run.sh
+├── Dockerfile, docker-entrypoint.sh   образ для Docker (infra/docker-compose.yml)
+└── setup.sh / run.sh  запуск без Docker (macOS/Linux)
 ```
 
 ## База данных
@@ -71,13 +64,13 @@ backend/
 - `users.points` — сумма записей `point_transactions` (хранится для быстрого рейтинга).
 - В `content.json` у модуля 4 урока заданы только названиями, поэтому слова, грамматика, текст и тест модуля загружаются в его первый урок. Их можно разнести по урокам в админке — API соберёт тему обратно.
 
-**PostgreSQL:**
+**PostgreSQL** (в Docker база создаётся автоматически — эти шаги нужны только для запуска без Docker):
 
 1. В pgAdmin создайте пользователя (Login/Group Role) `tildes` с паролем и правом входа (Can login), затем базу `tildes` с владельцем `tildes`.
    Для запуска тестов (`python manage.py test`) пользователю нужно право создавать базы: `ALTER ROLE tildes CREATEDB;`
 2. Скопируйте `.env.example` в `.env` (рядом с `manage.py`) и впишите пароль в `POSTGRES_PASSWORD`. Файл `.env` в git не попадает.
    Там же `DJANGO_ALLOWED_HOSTS` — домены, с которых Django принимает запросы (через запятую).
-3. Драйвер `psycopg` входит в `requirements.txt` (под Windows лежит в `wheels/`).
+3. Драйвер `psycopg` входит в `requirements.txt`.
 4. Создайте таблицы и загрузите контент: `python manage.py migrate`, затем `python manage.py load_content`.
 5. Создайте администратора: `python manage.py createsuperuser` (email и пароль).
 

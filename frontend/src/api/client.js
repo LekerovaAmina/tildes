@@ -46,7 +46,7 @@ function setToken(token) {
 // Понятный текст ошибки от сервера (для форм входа и регистрации)
 export function errorText(err) {
   const data = err?.data
-  if (!data) return err?.status ? `Ошибка сервера (${err.status})` : 'Нет связи с сервером. Запустите бэкенд (backend/run.bat).'
+  if (!data) return err?.status ? `Ошибка сервера (${err.status})` : 'Нет связи с сервером. Запустите бэкенд (см. README).'
   if (typeof data.detail === 'string') return data.detail
   return Object.values(data).flat().join(' ')
 }

@@ -4,3 +4,8 @@
 .DS_Store
 Thumbs.db
 
+
+# Локальные настройки (пароли). Шаблон — .env.example
+.env
+.env.*
+!.env.example

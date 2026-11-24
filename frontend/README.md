@@ -5,14 +5,16 @@ React 18 + Vite + React Router. Адаптивно: телефон (нижнее
 
 ## Запуск
 
-Нужен Node.js 18+.
+**Через Docker** — из корня репозитория: `docker compose --env-file .env -f infra/docker-compose.yml up --build` (поднимает и бэкенд, и фронтенд).
+
+**Без Docker** — нужен Node.js 18+:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Сначала запустите бэкенд (`backend/run.bat`), затем откройте http://localhost:5173. Чтобы открыть с телефона в той же Wi‑Fi сети — адрес `Network:` из консоли.
+Сначала запустите бэкенд (см. корневой `README.md`), затем откройте http://localhost:5173. Чтобы открыть с телефона в той же Wi‑Fi сети — адрес `Network:` из консоли.
 
 Сборка для продакшена: `npm run build` → папка `dist/`.
 
@@ -43,7 +45,7 @@ npm run dev
 | `/admin/lessons/:id/text` | 6 · Текст и тест |
 | `/admin/listening`, `/speaking`, `/writing` | 7–9 · разделы в разработке |
 
-Админ для разработки: **admin@admin.com / admin123** (создаёт `backend/setup.bat`, вернуть можно командой `python manage.py ensure_admin --reset-password`).
+Админ для разработки: **admin@admin.com / admin123** (создаётся при старте Docker-контейнера `core` или командой `python manage.py ensure_admin`; вернуть можно командой `python manage.py ensure_admin --reset-password`).
 
 ## Логика карточек (`src/store/srs.js`)
 
@@ -67,7 +69,7 @@ npm run dev
 - `src/store/content.jsx` — при старте загружает уровни и весь контент B2 (`GET /api/levels/b2/content/`).
 - `src/store/progress.jsx` — прогресс и баллы с сервера (`/api/progress/`). Изменения показываются сразу, баллы сверяются с ответом сервера.
 - Тест проверяет сервер (правильные ответы на фронт не приходят), колоду «Повторение» собирает сервер, таблица лидеров — настоящая.
-- В разработке Vite проксирует `/api/*` на `http://127.0.0.1:8000` (`vite.config.js`). Для продакшен-сборки задайте адрес бэкенда в `VITE_API_URL` (см. `.env.example`).
+- В разработке Vite проксирует `/api/*` на `http://127.0.0.1:8000` (`vite.config.js`); в Docker адрес задаёт переменная `VITE_PROXY_TARGET` (`http://core:8000`). Для продакшен-сборки задайте адрес бэкенда в `VITE_API_URL` (см. `.env.example`).
 
 ## Как добавить новый блок обучения
 

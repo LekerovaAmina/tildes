@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Установка бэкенда на macOS / Linux. Пакеты — из wheels/, недостающие (psycopg-binary, PyYAML…) — из PyPI
+# Установка бэкенда без Docker (macOS / Linux / Git Bash). Пакеты скачиваются из PyPI
 set -e
 # База — PostgreSQL: сначала заполните .env (см. .env.example и README.md)
 if [ ! -f .env ]; then
@@ -9,7 +9,7 @@ if [ ! -f .env ]; then
 fi
 python3 -m venv .venv
 . .venv/bin/activate
-pip install --find-links wheels -r requirements.txt
+pip install -r requirements.txt
 python manage.py migrate
 python manage.py load_content
 python manage.py ensure_admin  # admin@admin.com / admin123 — только для разработки

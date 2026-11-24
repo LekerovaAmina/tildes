@@ -19,7 +19,7 @@ export default function ServerGate({ children }) {
           <div className="soon-emoji">🔌</div>
           <h1>Нет связи с сервером</h1>
           <p className="muted">
-            Запустите бэкенд: в папке <code>backend</code> выполните <code>run.bat</code> (или <code>sh run.sh</code>) и
+            Запустите бэкенд: <code>docker compose -f infra/docker-compose.yml up</code> (или <code>python manage.py runserver</code> в папке <code>backend</code>) и
             обновите страницу.
           </p>
           <button className="btn btn-primary btn-lg" onClick={retry}>
