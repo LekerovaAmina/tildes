@@ -493,7 +493,7 @@ Windows и Python 3.10–3.13. `setup.bat` ставил их без интерн
 
 Файлы удалены через `git rm`, поэтому их всегда можно вернуть из истории git:
 ```powershell
-git checkout HEAD -- backend/wheels backend/setup.bat backend/run.bat
+git checkout 5493d5b -- backend/wheels backend/setup.bat backend/run.bat
 ```
 
 Строка `wheels/` из `backend/.dockerignore` тоже убрана: папки больше нет.
