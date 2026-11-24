@@ -93,14 +93,12 @@ __pycache__/
 !.env.example
 db.sqlite3*
 media/
-wheels/
 ```
 
 **Зачем.** Это как `.gitignore`, только для команды `COPY . .` в Dockerfile. Без него в образ
 попадут:
 - `.venv` — сотни мегабайт, к тому же собранные под Windows;
 - `.env` — ваш пароль от базы;
-- `wheels/` — пакеты под Windows. Контейнер работает на Linux, pip скачает нужные версии сам.
 
 ---
 
@@ -498,7 +496,8 @@ Windows и Python 3.10–3.13. `setup.bat` ставил их без интерн
 git checkout HEAD -- backend/wheels backend/setup.bat backend/run.bat
 ```
 
-Строка `wheels/` в `backend/.dockerignore` теперь лишняя, но безвредная: её можно убрать.
+Строка `wheels/` из `backend/.dockerignore` тоже убрана: папки больше нет.
+Дубликат `infra/.env.example` удалён: настройки только в корневом `.env.example`.
 
 ## Шаг 12. README обновлены (сделано)
 
